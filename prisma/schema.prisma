@@ -1,0 +1,241 @@
+// Actions Spreadsheet Web — PostgreSQL schema (Phase A–D foundation)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// npm run db:seed
+
+enum UserRole {
+  member
+  sub_lead
+  lead
+  aux
+  adm
+  management
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  username           String    @unique
+  passwordHash       String    @map("password_hash")
+  role               UserRole  @default(member)
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  disabledAt         DateTime? @map("disabled_at")
+  invitedViaInviteId String?   @unique @map("invited_via_invite_id")
+  mustResetPassword  Boolean   @default(false) @map("must_reset_password")
+
+  invitedViaInvite Invite?  @relation("UserInvite", fields: [invitedViaInviteId], references: [id])
+  invitesCreated   Invite[] @relation("InviteCreatedBy")
+  sessions         Session[]
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model Invite {
+  id              String    @id @default(cuid())
+  tokenHash       String    @unique @map("token_hash")
+  createdByUserId String    @map("created_by_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  expiresAt       DateTime  @map("expires_at")
+  maxUses         Int       @default(1) @map("max_uses")
+  useCount        Int       @default(0) @map("use_count")
+  revokedAt       DateTime? @map("revoked_at")
+  defaultRole     UserRole  @default(member) @map("default_role")
+
+  createdBy User  @relation("InviteCreatedBy", fields: [createdByUserId], references: [id])
+  redeemedBy User? @relation("UserInvite")
+
+  @@index([createdByUserId])
+  @@map("invites")
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  tokenHash        String   @unique @map("token_hash")
+  refreshTokenHash String?  @unique @map("refresh_token_hash")
+  expiresAt        DateTime @map("expires_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  ipAddress        String?  @map("ip_address")
+  userAgent        String?  @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  key       String
+  attempts  Int      @default(1)
+  windowStart DateTime @map("window_start")
+  lockedUntil DateTime? @map("locked_until")
+
+  @@unique([key])
+  @@map("login_attempts")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  payload    Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("audit_log")
+}
+
+model Backup {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  sizeBytes  BigInt?  @map("size_bytes")
+  storageKey String   @map("storage_key")
+  status     String   @default("completed")
+  createdBy  String   @default("system") @map("created_by")
+  kind       String   @default("nightly")
+
+  @@map("backups")
+}
+
+// --- Domain (Phase C/D) ---
+
+model Month {
+  id         String    @id @default(cuid())
+  name       String
+  slug       String    @unique
+  isActive   Boolean   @default(false) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  archivedAt DateTime? @map("archived_at")
+
+  scheduleSlots ScheduleSlot[]
+  trackerRows   TrackerRow[]
+  goalWeeks     GoalWeek[]
+
+  @@map("months")
+}
+
+model Staff {
+  id        String    @id @default(cuid())
+  name      String
+  rank      String?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("staff")
+}
+
+model ActionType {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  colourHex String    @map("colour_hex")
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("action_types")
+}
+
+model Gang {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  org2Eligible Boolean   @default(true) @map("org2_eligible")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  @@map("gangs")
+}
+
+model ScheduleSlot {
+  id            String    @id @default(cuid())
+  monthId       String    @map("month_id")
+  weekIndex     Int       @map("week_index")
+  dayIndex      Int       @map("day_index")
+  rowIndex      Int       @map("row_index")
+  timeText      String?   @map("time_text")
+  typeName      String?   @map("type_name")
+  dateBooked    DateTime? @map("date_booked") @db.Date
+  bookedBy      String?   @map("booked_by")
+  orgName       String?   @map("org_name")
+  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  month       Month        @relation(fields: [monthId], references: [id], onDelete: Cascade)
+  trackerRows TrackerRow[]
+
+  @@unique([monthId, weekIndex, dayIndex, rowIndex])
+  @@map("schedule_slots")
+}
+
+model TrackerRow {
+  id              String    @id @default(cuid())
+  monthId         String    @map("month_id")
+  scheduleSlotId  String?   @unique @map("schedule_slot_id")
+  sortOrder       Int       @default(0) @map("sort_order")
+  actionDate      DateTime? @map("action_date") @db.Date
+  typeName        String?   @map("type_name")
+  status          String[]  @default([])
+  org1Name        String?   @map("org1_name")
+  org2Name        String?   @map("org2_name")
+  hostedBy        String?   @map("hosted_by")
+  attended        String[]  @default([])
+  actionWinner    String?   @map("action_winner")
+  org1Attended    String?   @map("org1_attended")
+  org2Attended    String?   @map("org2_attended")
+  deletedAt       DateTime? @map("deleted_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  month        Month         @relation(fields: [monthId], references: [id], onDelete: Cascade)
+  scheduleSlot ScheduleSlot? @relation(fields: [scheduleSlotId], references: [id], onDelete: SetNull)
+
+  @@index([monthId, sortOrder])
+  @@map("tracker_rows")
+}
+
+model GoalWeek {
+  id        String   @id @default(cuid())
+  monthId   String   @map("month_id")
+  weekDates DateTime[] @map("week_dates")
+
+  month Month @relation(fields: [monthId], references: [id], onDelete: Cascade)
+
+  @@map("goal_weeks")
+}
+
+model GoalScore {
+  id            String   @id @default(cuid())
+  staffName     String   @map("staff_name")
+  monthId       String   @map("month_id")
+  kind          String
+  dayIndex      Int      @map("day_index")
+  points        Int      @default(0)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([staffName, monthId, kind, dayIndex])
+  @@map("goal_scores")
+}
+
+model AppSetting {
+  key   String @id
+  value String
+
+  @@map("app_settings")
+}

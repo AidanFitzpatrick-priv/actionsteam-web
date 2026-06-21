@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# Backups (local exports)
+backups/
+
+# Debug
+npm-debug.log*
+.DS_Store
+
+# Prisma
+*.db
+*.db-journal
+
+# IDE
+.idea/
+.vscode/
+
+# Test
+coverage/
