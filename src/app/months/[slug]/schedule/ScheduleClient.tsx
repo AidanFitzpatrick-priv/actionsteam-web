@@ -46,49 +46,33 @@ type Calendar = {
 type Dropdowns = {
   types: { name: string; colourHex: string }[];
   org2: string[];
-  staff: string[];
+  accountUsers: string[];
 };
 
 function slotIsFilled(slot: Slot): boolean {
   return Boolean(slot.typeName?.trim() || slot.orgName?.trim() || slot.bookedBy?.trim());
 }
 
-function mergeBookedByOptions(staff: string[], slots: Slot[]): string[] {
-  const seen = new Map<string, string>();
-  for (const name of staff) {
-    const trimmed = name.trim();
-    if (!trimmed) continue;
-    const key = trimmed.toLowerCase();
-    if (!seen.has(key)) seen.set(key, trimmed);
-  }
-  for (const slot of slots) {
-    const trimmed = slot.bookedBy?.trim();
-    if (!trimmed) continue;
-    const key = trimmed.toLowerCase();
-    if (!seen.has(key)) seen.set(key, trimmed);
-  }
-  return Array.from(seen.values()).sort((a, b) =>
-    a.localeCompare(b, undefined, { sensitivity: "base" })
-  );
+function bookedByOptionsForSlot(accountUsers: string[], current: string | null): string[] {
+  const trimmed = current?.trim();
+  if (!trimmed) return accountUsers;
+  if (accountUsers.some(u => u.toLowerCase() === trimmed.toLowerCase())) return accountUsers;
+  return [...accountUsers, trimmed];
 }
 
 function ScheduleSlotCell({
   slot,
   dropdowns,
-  bookedByOptions,
+  accountUsers,
   onPatch
 }: {
   slot: Slot;
   dropdowns: Dropdowns;
-  bookedByOptions: string[];
+  accountUsers: string[];
   onPatch: (id: string, patch: Record<string, unknown>) => void;
 }) {
   const filled = slotIsFilled(slot);
-  const options =
-    slot.bookedBy?.trim() &&
-    !bookedByOptions.some(o => o.toLowerCase() === slot.bookedBy!.trim().toLowerCase())
-      ? [...bookedByOptions, slot.bookedBy.trim()]
-      : bookedByOptions;
+  const options = bookedByOptionsForSlot(accountUsers, slot.bookedBy);
 
   return (
     <td
@@ -209,8 +193,8 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
   }, [weekSlots, activeRowIndices]);
 
   const bookedByOptions = useMemo(
-    () => (dropdowns ? mergeBookedByOptions(dropdowns.staff, slots) : []),
-    [dropdowns, slots]
+    () => dropdowns?.accountUsers ?? [],
+    [dropdowns]
   );
 
   if (!dropdowns || !calendar) return <p className="muted">Loading schedule…</p>;
@@ -279,7 +263,7 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
                         key={slot.id}
                         slot={slot}
                         dropdowns={dropdowns}
-                        bookedByOptions={bookedByOptions}
+                        accountUsers={bookedByOptions}
                         onPatch={patch}
                       />
                     );

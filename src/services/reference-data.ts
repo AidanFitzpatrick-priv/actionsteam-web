@@ -170,10 +170,15 @@ export async function softDeleteGang(params: {
 
 /** Dropdown options for tracker/schedule — PD first in org2 list. */
 export async function getDropdownOptions() {
-  const [staff, types, gangs] = await Promise.all([
+  const [staff, types, gangs, accountUsers] = await Promise.all([
     listStaff(),
     listActionTypes(),
-    listGangs()
+    listGangs(),
+    prisma.user.findMany({
+      where: { disabledAt: null },
+      orderBy: { username: "asc" },
+      select: { username: true }
+    })
   ]);
 
   const org1Names = gangs.map(g => g.name);
@@ -181,6 +186,7 @@ export async function getDropdownOptions() {
 
   return {
     staff: staff.filter(s => s.active).map(s => s.name),
+    accountUsers: accountUsers.map(u => u.username),
     types: types.map(t => ({ name: t.name, colourHex: t.colourHex })),
     org1: org1Names,
     org2: org2Names,
