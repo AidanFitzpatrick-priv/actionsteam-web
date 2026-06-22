@@ -3,7 +3,8 @@
 
 [build]
 builder = "nixpacks"
-buildCommand = "npm ci && npm run build"
+# install phase already runs npm ci — do not run it again (causes EBUSY on node_modules/.cache)
+buildCommand = "npm run build"
 
 [deploy]
 preDeployCommand = "npx prisma db push --skip-generate"

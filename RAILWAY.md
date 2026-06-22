@@ -61,7 +61,7 @@ For production, extend `scripts/nightly-backup.ts` to upload to S3/R2.
 
 | Issue | Fix |
 |-------|-----|
-| Build fails on Prisma | Ensure `postinstall` runs; check `DATABASE_URL` is set for **preDeployCommand** |
+| Build fails (Node 18 / EBUSY) | Repo includes `.node-version` (20) and `nixpacks.toml`; redeploy after pulling latest |
 | 502 on start | Check deploy logs; confirm Postgres is linked |
 | Invite links show localhost | Set `APP_URL` to your public URL |
 | CSRF errors | `APP_URL` must match the browser origin (include `https://`) |
