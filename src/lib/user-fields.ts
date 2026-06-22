@@ -6,6 +6,13 @@ export const cityIdSchema = z
   .min(1, "City ID is required")
   .max(64, "City ID is too long");
 
+export const optionalCityIdSchema = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .refine(v => !v || (v.length >= 1 && v.length <= 64), "City ID must be 1–64 characters");
+
 export const discordIdSchema = z
   .string()
   .trim()

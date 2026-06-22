@@ -19,6 +19,7 @@ const ROLES: UserRole[] = ["member", "sub_lead", "lead", "aux", "adm", "manageme
 
 export function AdminUsersClient() {
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [cityDraft, setCityDraft] = useState<Record<string, string>>({});
   const [discordDraft, setDiscordDraft] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
@@ -26,6 +27,13 @@ export function AdminUsersClient() {
     const data = await res.json();
     if (res.ok) {
       setUsers(data.users);
+      setCityDraft(prev => {
+        const next = { ...prev };
+        for (const u of data.users as UserRow[]) {
+          if (next[u.id] === undefined) next[u.id] = u.cityId ?? "";
+        }
+        return next;
+      });
       setDiscordDraft(prev => {
         const next = { ...prev };
         for (const u of data.users as UserRow[]) {
@@ -45,13 +53,25 @@ export function AdminUsersClient() {
     }
   });
 
-  async function patch(userId: string, patch: { role?: UserRole; disabled?: boolean; discordId?: string | null }) {
-    await fetch("/api/admin/users", {
+  async function patch(
+    userId: string,
+    patch: { role?: UserRole; disabled?: boolean; cityId?: string | null; discordId?: string | null }
+  ) {
+    const res = await fetch("/api/admin/users", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, ...patch })
     });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error ?? "Update failed");
+    }
     await load();
+  }
+
+  async function saveCityId(userId: string) {
+    const raw = cityDraft[userId]?.trim();
+    await patch(userId, { cityId: raw || null });
   }
 
   async function saveDiscord(userId: string) {
@@ -78,18 +98,25 @@ export function AdminUsersClient() {
             <tr key={u.id}>
               <td>{u.username}</td>
               <td>{u.email}</td>
-              <td className="muted">{u.cityId ?? "—"}</td>
               <td>
-                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                  <input
-                    className="input"
-                    style={{ maxWidth: 180, padding: "4px 8px", fontSize: 13 }}
-                    value={discordDraft[u.id] ?? ""}
-                    placeholder="17–20 digits"
-                    onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
-                    onBlur={() => saveDiscord(u.id)}
-                  />
-                </div>
+                <input
+                  className="input"
+                  style={{ maxWidth: 140, padding: "4px 8px", fontSize: 13 }}
+                  value={cityDraft[u.id] ?? ""}
+                  placeholder="City ID"
+                  onChange={e => setCityDraft(d => ({ ...d, [u.id]: e.target.value }))}
+                  onBlur={() => saveCityId(u.id)}
+                />
+              </td>
+              <td>
+                <input
+                  className="input"
+                  style={{ maxWidth: 180, padding: "4px 8px", fontSize: 13 }}
+                  value={discordDraft[u.id] ?? ""}
+                  placeholder="17–20 digits"
+                  onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
+                  onBlur={() => saveDiscord(u.id)}
+                />
               </td>
               <td>
                 <select
