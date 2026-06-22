@@ -398,10 +398,10 @@ export function TrackerClient({
               <th className="tracker-col-org">ORG 1</th>
               <th className="tracker-col-org">ORG 2</th>
               <th className="tracker-col-attended">Attended</th>
-              <th className="tracker-col-ids">ID&apos;s</th>
               <th className="tracker-col-winner">Winner</th>
               <th className="tracker-col-count">ORG 1 #</th>
               <th className="tracker-col-count">ORG 2 #</th>
+              <th className="tracker-col-ids">ID&apos;s</th>
               <th className="tracker-col-actions" aria-label="Actions" />
             </tr>
           </thead>
@@ -518,20 +518,6 @@ export function TrackerClient({
                         onPatch={updateRow}
                       />
                     </td>
-                    <td className="tracker-col-ids">
-                      <input
-                        className="input-compact tracker-field"
-                        aria-label="ID's"
-                        placeholder="IDs"
-                        maxLength={500}
-                        defaultValue={row.idsText ?? ""}
-                        onFocus={() => markEditing(row.id)}
-                        onBlur={e => {
-                          updateRow(row.id, { idsText: e.target.value.trim() || null });
-                          markDoneEditing(row.id);
-                        }}
-                      />
-                    </td>
                     <td className="tracker-col-winner">
                       <select
                         className="select-compact tracker-field"
@@ -568,6 +554,20 @@ export function TrackerClient({
                         onFocus={() => markEditing(row.id)}
                         onBlur={e => {
                           updateRow(row.id, { org2Attended: e.target.value || null });
+                          markDoneEditing(row.id);
+                        }}
+                      />
+                    </td>
+                    <td className="tracker-col-ids">
+                      <input
+                        className="input-compact tracker-field"
+                        aria-label="ID's"
+                        placeholder="IDs"
+                        maxLength={500}
+                        defaultValue={row.idsText ?? ""}
+                        onFocus={() => markEditing(row.id)}
+                        onBlur={e => {
+                          updateRow(row.id, { idsText: e.target.value.trim() || null });
                           markDoneEditing(row.id);
                         }}
                       />

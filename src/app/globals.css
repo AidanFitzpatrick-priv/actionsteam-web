@@ -328,6 +328,7 @@ h2 { font-size: 1.25rem; margin: 0 0 16px; }
 .tracker-col-attended { width: 10rem; }
 .tracker-col-winner { width: 8rem; }
 .tracker-col-count { width: 4.5rem; }
+.tracker-col-ids { width: 8rem; }
 .tracker-col-actions { width: 2.75rem; text-align: center; }
 .tracker-grid .input-compact,
 .tracker-grid .select-compact {
