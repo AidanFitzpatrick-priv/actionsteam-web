@@ -1,16 +1,19 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import type { UserRole } from "@prisma/client";
+import { canHardDeleteMonth } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Month = { id: string; name: string; slug: string; isActive: boolean; archivedAt: string | null };
 
-export function AdminMonthsClient() {
+export function AdminMonthsClient({ viewerRole }: { viewerRole: UserRole }) {
   const [months, setMonths] = useState<Month[]>([]);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
+  const showHardDelete = canHardDeleteMonth(viewerRole);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/months");
@@ -42,11 +45,15 @@ export function AdminMonthsClient() {
   }
 
   async function action(slug: string, actionName: "activate" | "archive" | "hard_delete", reason?: string) {
-    await fetch(`/api/admin/months/${slug}`, {
+    const res = await fetch(`/api/admin/months/${slug}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: actionName, reason })
     });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error ?? "Action failed");
+    }
     await load();
   }
 
@@ -84,7 +91,9 @@ export function AdminMonthsClient() {
                   {!m.archivedAt && (
                     <button type="button" className="btn btn-secondary" onClick={() => action(m.slug, "archive")}>Archive</button>
                   )}
-                  <button type="button" className="btn btn-danger" onClick={() => setDeleteSlug(m.slug)}>Hard delete…</button>
+                  {showHardDelete && (
+                    <button type="button" className="btn btn-danger" onClick={() => setDeleteSlug(m.slug)}>Hard delete…</button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -92,7 +101,7 @@ export function AdminMonthsClient() {
         </table>
       </div>
 
-      {deleteSlug && (
+      {showHardDelete && deleteSlug && (
         <div className="card" style={{ marginTop: 16, borderColor: "var(--danger)" }}>
           <h2>Confirm hard delete</h2>
           <p className="muted">Type a reason. This permanently removes the month and all schedule/tracker data.</p>

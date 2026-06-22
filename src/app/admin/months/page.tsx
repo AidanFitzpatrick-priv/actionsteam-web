@@ -11,8 +11,10 @@ export default async function AdminMonthsPage() {
   return (
     <div className="container-wide">
       <h1>Months</h1>
-      <p className="muted">Create months, set active, archive, or hard-delete (with reason).</p>
-      <AdminMonthsClient />
+      <p className="muted">
+        Create months, set active, or archive. Hard delete is restricted to adm and management (with reason).
+      </p>
+      <AdminMonthsClient viewerRole={user.role} />
     </div>
   );
 }

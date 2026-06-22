@@ -11,8 +11,11 @@ export default async function AdminUsersPage() {
   return (
     <div className="container-wide">
       <h1>Users</h1>
-      <p className="muted">Disable accounts or change roles. Only management can assign management.</p>
-      <AdminUsersClient />
+      <p className="muted">
+        Disable accounts or change roles. You can only change roles for users below your rank.
+        Only management can assign management.
+      </p>
+      <AdminUsersClient viewerRole={user.role} />
     </div>
   );
 }

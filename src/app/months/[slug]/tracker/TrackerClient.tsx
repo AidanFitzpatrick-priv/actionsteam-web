@@ -13,6 +13,7 @@ type Row = {
   org2Name: string | null;
   hostedBy: string | null;
   attended: string[];
+  idsText: string | null;
   actionWinner: string | null;
   org1Attended: string | null;
   org2Attended: string | null;
@@ -213,6 +214,7 @@ function rowHasData(row: Row): boolean {
       row.org2Name?.trim() ||
       row.status.length ||
       row.attended.length ||
+      row.idsText?.trim() ||
       row.actionWinner?.trim()
   );
 }
@@ -396,6 +398,7 @@ export function TrackerClient({
               <th className="tracker-col-org">ORG 1</th>
               <th className="tracker-col-org">ORG 2</th>
               <th className="tracker-col-attended">Attended</th>
+              <th className="tracker-col-ids">ID&apos;s</th>
               <th className="tracker-col-winner">Winner</th>
               <th className="tracker-col-count">ORG 1 #</th>
               <th className="tracker-col-count">ORG 2 #</th>
@@ -405,7 +408,7 @@ export function TrackerClient({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={10} className="tracker-empty-hint muted">
+                <td colSpan={11} className="tracker-empty-hint muted">
                   No rows yet — press Add row to log an action.
                 </td>
               </tr>
@@ -513,6 +516,20 @@ export function TrackerClient({
                         attended={row.attended}
                         accountUsers={dropdowns.accountUsers}
                         onPatch={updateRow}
+                      />
+                    </td>
+                    <td className="tracker-col-ids">
+                      <input
+                        className="input-compact tracker-field"
+                        aria-label="ID's"
+                        placeholder="IDs"
+                        maxLength={500}
+                        defaultValue={row.idsText ?? ""}
+                        onFocus={() => markEditing(row.id)}
+                        onBlur={e => {
+                          updateRow(row.id, { idsText: e.target.value.trim() || null });
+                          markDoneEditing(row.id);
+                        }}
                       />
                     </td>
                     <td className="tracker-col-winner">

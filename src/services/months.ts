@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
+import { canHardDeleteMonth } from "@/lib/rbac";
 import { slugifyMonth } from "@/lib/names";
 import { parseMonthLabel } from "@/lib/schedule-calendar";
 import { seedScheduleSlotsForMonth } from "@/services/schedule-calendar";
@@ -105,8 +106,12 @@ export async function hardDeleteMonth(params: {
   slug: string;
   reason: string;
   actorUserId: string;
+  actorRole: import("@prisma/client").UserRole;
   ipAddress?: string | null;
 }) {
+  if (!canHardDeleteMonth(params.actorRole)) {
+    throw new Error("Only adm or management can hard delete a month");
+  }
   const month = await prisma.month.findUnique({ where: { slug: params.slug } });
   if (!month) throw new Error("Month not found");
 

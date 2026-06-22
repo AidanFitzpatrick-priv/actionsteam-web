@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { jsonError, jsonOk, requireRole, getMeta, ApiError } from "@/lib/api";
+import { canHardDeleteMonth } from "@/lib/rbac";
 import { publishAdminChange } from "@/services/live-sync";
 import * as months from "@/services/months";
 
@@ -39,6 +40,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
 
     if (body.action === "hard_delete") {
+      if (!canHardDeleteMonth(user.role)) {
+        throw new ApiError(403, "Only adm or management can hard delete a month");
+      }
       if (!body.reason || body.reason.trim().length < 3) {
         throw new ApiError(400, "Reason required for hard delete");
       }
@@ -46,6 +50,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         slug,
         reason: body.reason.trim(),
         actorUserId: user.id,
+        actorRole: user.role,
         ipAddress: meta.ipAddress
       });
       await publishAdminChange(user.id, "months:hard_delete");

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { UserRole } from "@prisma/client";
-import { formatRole } from "@/lib/rbac";
+import { allowedRoleOptionsForActor, canEditUserRole, formatRole } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type UserRow = {
@@ -15,12 +15,11 @@ type UserRow = {
   disabledAt: string | null;
 };
 
-const ROLES: UserRole[] = ["member", "sub_lead", "lead", "aux", "adm", "management"];
-
-export function AdminUsersClient() {
+export function AdminUsersClient({ viewerRole }: { viewerRole: UserRole }) {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [cityDraft, setCityDraft] = useState<Record<string, string>>({});
   const [discordDraft, setDiscordDraft] = useState<Record<string, string>>({});
+  const assignableRoles = allowedRoleOptionsForActor(viewerRole);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/users");
@@ -94,47 +93,62 @@ export function AdminUsersClient() {
           </tr>
         </thead>
         <tbody>
-          {users.map(u => (
-            <tr key={u.id}>
-              <td>{u.username}</td>
-              <td>{u.email}</td>
-              <td>
-                <input
-                  className="input"
-                  style={{ maxWidth: 140, padding: "4px 8px", fontSize: 13 }}
-                  value={cityDraft[u.id] ?? ""}
-                  placeholder="City ID"
-                  onChange={e => setCityDraft(d => ({ ...d, [u.id]: e.target.value }))}
-                  onBlur={() => saveCityId(u.id)}
-                />
-              </td>
-              <td>
-                <input
-                  className="input"
-                  style={{ maxWidth: 180, padding: "4px 8px", fontSize: 13 }}
-                  value={discordDraft[u.id] ?? ""}
-                  placeholder="17–20 digits"
-                  onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
-                  onBlur={() => saveDiscord(u.id)}
-                />
-              </td>
-              <td>
-                <select
-                  className="select"
-                  value={u.role}
-                  onChange={e => patch(u.id, { role: e.target.value as UserRole })}
-                >
-                  {ROLES.map(r => <option key={r} value={r}>{formatRole(r)}</option>)}
-                </select>
-              </td>
-              <td>{u.disabledAt ? "Disabled" : "Active"}</td>
-              <td>
-                <button type="button" className="btn btn-secondary" onClick={() => patch(u.id, { disabled: !u.disabledAt })}>
-                  {u.disabledAt ? "Enable" : "Disable"}
-                </button>
-              </td>
-            </tr>
-          ))}
+          {users.map(u => {
+            const canEditRole = canEditUserRole(viewerRole, u.role);
+            const roleOptions = canEditRole
+              ? assignableRoles.includes(u.role)
+                ? assignableRoles
+                : [u.role, ...assignableRoles.filter(r => r !== u.role)]
+              : [];
+
+            return (
+              <tr key={u.id}>
+                <td>{u.username}</td>
+                <td>{u.email}</td>
+                <td>
+                  <input
+                    className="input"
+                    style={{ maxWidth: 140, padding: "4px 8px", fontSize: 13 }}
+                    value={cityDraft[u.id] ?? ""}
+                    placeholder="City ID"
+                    onChange={e => setCityDraft(d => ({ ...d, [u.id]: e.target.value }))}
+                    onBlur={() => saveCityId(u.id)}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="input"
+                    style={{ maxWidth: 180, padding: "4px 8px", fontSize: 13 }}
+                    value={discordDraft[u.id] ?? ""}
+                    placeholder="17–20 digits"
+                    onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
+                    onBlur={() => saveDiscord(u.id)}
+                  />
+                </td>
+                <td>
+                  {canEditRole ? (
+                    <select
+                      className="select"
+                      value={u.role}
+                      onChange={e => patch(u.id, { role: e.target.value as UserRole })}
+                    >
+                      {roleOptions.map(r => (
+                        <option key={r} value={r}>{formatRole(r)}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="muted">{formatRole(u.role)}</span>
+                  )}
+                </td>
+                <td>{u.disabledAt ? "Disabled" : "Active"}</td>
+                <td>
+                  <button type="button" className="btn btn-secondary" onClick={() => patch(u.id, { disabled: !u.disabledAt })}>
+                    {u.disabledAt ? "Enable" : "Disable"}
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

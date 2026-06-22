@@ -1,7 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
-import { formatRole } from "@/lib/rbac";
+import { formatRole, canEditUserRole, canAssignRole } from "@/lib/rbac";
 
 export async function listUsers() {
   const users = await prisma.user.findMany({
@@ -41,6 +41,12 @@ export async function updateUser(params: {
   if (!target) throw new Error("User not found");
 
   if (params.role !== undefined) {
+    if (!canEditUserRole(params.actorRole, target.role)) {
+      throw new Error("You cannot change the role of someone at or above your rank");
+    }
+    if (!canAssignRole(params.actorRole, params.role)) {
+      throw new Error("You cannot assign that role");
+    }
     if (params.role === "management" && params.actorRole !== "management") {
       throw new Error("Only management can assign the management role");
     }

@@ -200,6 +200,7 @@ model TrackerRow {
   org2Name        String?   @map("org2_name")
   hostedBy        String?   @map("hosted_by")
   attended        String[]  @default([])
+  idsText         String?   @map("ids_text")
   actionWinner    String?   @map("action_winner")
   org1Attended    String?   @map("org1_attended")
   org2Attended    String?   @map("org2_attended")

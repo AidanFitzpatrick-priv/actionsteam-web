@@ -20,6 +20,7 @@ export async function patchTrackerRow(
     org2Name: string | null;
     hostedBy: string | null;
     attended: string[];
+    idsText: string | null;
     actionWinner: string | null;
     org1Attended: string | null;
     org2Attended: string | null;
