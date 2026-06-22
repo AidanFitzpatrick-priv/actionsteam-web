@@ -5,7 +5,6 @@ import { getMonthBySlug } from "@/services/months";
 import { getScheduleSlots, getTypeColorMap, colorForType } from "@/services/schedule";
 import { getDropdownOptions } from "@/services/reference-data";
 import { calendarForApi } from "@/services/schedule-calendar";
-import { parseDate } from "@/lib/dates";
 import { resolveMonthYear } from "@/lib/schedule-calendar";
 import { prisma } from "@/lib/db";
 
@@ -57,7 +56,6 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         slotId: z.string(),
         timeText: z.string().nullable().optional(),
         typeName: z.string().nullable().optional(),
-        dateBooked: z.string().nullable().optional(),
         bookedBy: z.string().nullable().optional(),
         orgName: z.string().nullable().optional()
       })
@@ -68,8 +66,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       timeText: body.timeText,
       typeName: body.typeName,
       bookedBy: body.bookedBy,
-      orgName: body.orgName,
-      dateBooked: body.dateBooked ? parseDate(body.dateBooked) : body.dateBooked === null ? null : undefined
+      orgName: body.orgName
     });
 
     const colorMap = await getTypeColorMap();

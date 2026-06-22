@@ -53,16 +53,42 @@ function slotIsFilled(slot: Slot): boolean {
   return Boolean(slot.typeName?.trim() || slot.orgName?.trim() || slot.bookedBy?.trim());
 }
 
+function mergeBookedByOptions(staff: string[], slots: Slot[]): string[] {
+  const seen = new Map<string, string>();
+  for (const name of staff) {
+    const trimmed = name.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (!seen.has(key)) seen.set(key, trimmed);
+  }
+  for (const slot of slots) {
+    const trimmed = slot.bookedBy?.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (!seen.has(key)) seen.set(key, trimmed);
+  }
+  return Array.from(seen.values()).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+}
+
 function ScheduleSlotCell({
   slot,
   dropdowns,
+  bookedByOptions,
   onPatch
 }: {
   slot: Slot;
   dropdowns: Dropdowns;
+  bookedByOptions: string[];
   onPatch: (id: string, patch: Record<string, unknown>) => void;
 }) {
   const filled = slotIsFilled(slot);
+  const options =
+    slot.bookedBy?.trim() &&
+    !bookedByOptions.some(o => o.toLowerCase() === slot.bookedBy!.trim().toLowerCase())
+      ? [...bookedByOptions, slot.bookedBy.trim()]
+      : bookedByOptions;
 
   return (
     <td
@@ -84,13 +110,20 @@ function ScheduleSlotCell({
         ))}
       </select>
       <div className="schedule-slot-meta">
-        <input
-          className="input-compact schedule-field"
+        <select
+          className="select-compact schedule-field"
+          value={slot.bookedBy ?? ""}
           aria-label="Booked by"
-          placeholder="By"
-          defaultValue={slot.bookedBy ?? ""}
-          onBlur={e => onPatch(slot.id, { bookedBy: e.target.value || null })}
-        />
+          title="Booked by"
+          onChange={e => onPatch(slot.id, { bookedBy: e.target.value || null })}
+        >
+          <option value="">—</option>
+          {options.map(name => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
         <select
           className="select-compact schedule-field"
           value={slot.orgName ?? ""}
@@ -175,6 +208,11 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
     });
   }, [weekSlots, activeRowIndices]);
 
+  const bookedByOptions = useMemo(
+    () => (dropdowns ? mergeBookedByOptions(dropdowns.staff, slots) : []),
+    [dropdowns, slots]
+  );
+
   if (!dropdowns || !calendar) return <p className="muted">Loading schedule…</p>;
 
   return (
@@ -241,6 +279,7 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
                         key={slot.id}
                         slot={slot}
                         dropdowns={dropdowns}
+                        bookedByOptions={bookedByOptions}
                         onPatch={patch}
                       />
                     );

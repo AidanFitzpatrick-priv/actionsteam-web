@@ -152,9 +152,23 @@ export async function syncScheduleSlotToTracker(slotId: string) {
 }
 
 export async function applyScheduleSlotUpdate(slotId: string, update: SlotUpdate) {
+  const existing = await prisma.scheduleSlot.findUnique({ where: { id: slotId } });
+  if (!existing) throw new Error("Schedule slot not found");
+
+  const data: SlotUpdate = { ...update };
+
+  if ("bookedBy" in update) {
+    const newBy = update.bookedBy?.trim() ?? "";
+    if (!newBy) {
+      data.dateBooked = null;
+    } else if (!existing.dateBooked) {
+      data.dateBooked = toDateOnly(new Date());
+    }
+  }
+
   const slot = await prisma.scheduleSlot.update({
     where: { id: slotId },
-    data: update
+    data
   });
   await syncScheduleSlotToTracker(slot.id);
   return slot;
