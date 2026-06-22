@@ -13,7 +13,7 @@ export default async function SchedulePage({ params }: Props) {
   if (!month || month.archivedAt) notFound();
 
   return (
-    <div className="container-wide">
+    <div className="container-schedule">
       <ScheduleClient slug={slug} monthName={month.name} />
     </div>
   );
