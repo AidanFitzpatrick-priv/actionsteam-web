@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Tab = "staff" | "types" | "gangs";
 
@@ -17,6 +18,13 @@ export function AdminDataClient() {
   }, [tab]);
 
   useEffect(() => { load(); }, [load]);
+
+  useLiveSync({
+    admin: true,
+    onEvent: ev => {
+      if (ev.type === "admin.updated") load();
+    }
+  });
 
   async function save(e: FormEvent) {
     e.preventDefault();

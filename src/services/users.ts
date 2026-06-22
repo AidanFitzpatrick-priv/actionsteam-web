@@ -17,6 +17,8 @@ export async function listUsers() {
     id: u.id,
     email: u.email,
     username: u.username,
+    cityId: u.cityId,
+    discordId: u.discordId,
     role: u.role,
     roleLabel: formatRole(u.role),
     createdAt: u.createdAt,
@@ -31,6 +33,7 @@ export async function updateUser(params: {
   actorRole: UserRole;
   role?: UserRole;
   disabled?: boolean;
+  discordId?: string | null;
   ipAddress?: string | null;
 }) {
   const target = await prisma.user.findUnique({ where: { id: params.userId } });
@@ -45,10 +48,13 @@ export async function updateUser(params: {
     }
   }
 
-  const data: { role?: UserRole; disabledAt?: Date | null } = {};
+  const data: { role?: UserRole; disabledAt?: Date | null; discordId?: string | null } = {};
   if (params.role !== undefined) data.role = params.role;
   if (params.disabled !== undefined) {
     data.disabledAt = params.disabled ? new Date() : null;
+  }
+  if (params.discordId !== undefined) {
+    data.discordId = params.discordId?.trim() || null;
   }
 
   const updated = await prisma.user.update({
@@ -61,7 +67,7 @@ export async function updateUser(params: {
     action: "user.update",
     entityType: "user",
     entityId: params.userId,
-    payload: { role: params.role, disabled: params.disabled },
+    payload: { role: params.role, disabled: params.disabled, discordId: params.discordId },
     ipAddress: params.ipAddress
   });
 

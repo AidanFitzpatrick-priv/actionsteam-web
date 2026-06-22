@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { canViewAllInvites } from "@/lib/rbac";
+import { useLiveSync } from "@/hooks/useLiveSync";
 import type { UserRole } from "@prisma/client";
 
 type InviteRow = {
@@ -33,6 +34,13 @@ export function InvitesAdminClient({ viewerRole }: { viewerRole: UserRole }) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useLiveSync({
+    invites: true,
+    onEvent: ev => {
+      if (ev.type === "invites.updated") load();
+    }
+  });
 
   async function createInvite(e: FormEvent) {
     e.preventDefault();

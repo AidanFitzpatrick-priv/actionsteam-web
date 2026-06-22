@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 export function GoalsClient({ kind }: { kind: "actions" | "bookings" }) {
   const [data, setData] = useState<{
     weekDates: string[];
     scores: Array<{ staffName: string; points: number[]; total: number }>;
   } | null>(null);
+  const [selfUserId, setSelfUserId] = useState<string | undefined>();
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/goals?kind=${kind}`);
@@ -15,6 +17,20 @@ export function GoalsClient({ kind }: { kind: "actions" | "bookings" }) {
   }, [kind]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then(r => r.json())
+      .then(d => { if (d.user?.id) setSelfUserId(d.user.id); })
+      .catch(() => {});
+  }, []);
+
+  useLiveSync({
+    selfUserId,
+    onEvent: ev => {
+      if (ev.type === "goals.updated") load();
+    }
+  });
 
   if (!data) return <p className="muted">Loading…</p>;
 
@@ -25,7 +41,7 @@ export function GoalsClient({ kind }: { kind: "actions" | "bookings" }) {
   return (
     <div>
       <h1>{kind === "actions" ? "Action" : "Booking"} goal scores</h1>
-      <p className="muted">Weekly Mon–Sun points. Members see own row only.</p>
+      <p className="muted">Weekly Mon–Sun points. You see your row and everyone below your rank. Updates live.</p>
       <div className="card" style={{ marginTop: 16, overflowX: "auto" }}>
         <table className="table">
           <thead>

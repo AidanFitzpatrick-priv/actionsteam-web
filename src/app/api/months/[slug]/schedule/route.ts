@@ -46,7 +46,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
-    await requireRole("member");
+    const user = await requireRole("member");
     const { slug } = await ctx.params;
     const month = await getMonthBySlug(slug);
     if (!month || month.archivedAt) throw new ApiError(404, "Month not found");
@@ -71,6 +71,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const { recalculateAllPoints } = await import("@/services/points");
     await recalculateAllPoints();
+
+    const { publishScheduleChange } = await import("@/services/live-sync");
+    await publishScheduleChange({
+      monthId: month.id,
+      monthSlug: slug,
+      actorId: user.id,
+      slotId: slot.id
+    });
 
     const colorMap = await getTypeColorMap();
     return jsonOk({

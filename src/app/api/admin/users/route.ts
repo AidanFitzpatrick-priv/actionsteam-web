@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { UserRole } from "@prisma/client";
 import { jsonError, jsonOk, requireRole, getMeta } from "@/lib/api";
+import { discordIdSchema } from "@/lib/user-fields";
+import { publishAdminChange } from "@/services/live-sync";
 import * as users from "@/services/users";
 
 export async function GET() {
@@ -21,7 +23,8 @@ export async function PATCH(req: NextRequest) {
       .object({
         userId: z.string(),
         role: z.nativeEnum(UserRole).optional(),
-        disabled: z.boolean().optional()
+        disabled: z.boolean().optional(),
+        discordId: discordIdSchema
       })
       .parse(await req.json());
     const meta = getMeta(req);
@@ -32,8 +35,11 @@ export async function PATCH(req: NextRequest) {
       actorRole: actor.role,
       role: body.role,
       disabled: body.disabled,
+      discordId: body.discordId,
       ipAddress: meta.ipAddress
     });
+
+    await publishAdminChange(actor.id, "users");
 
     return jsonOk({ user: updated });
   } catch (e) {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateUKShort } from "@/lib/dates";
+import { useLiveSync, useEditingIds } from "@/hooks/useLiveSync";
 
 type Row = {
   id: string;
@@ -230,6 +231,8 @@ export function TrackerClient({
   const [toast, setToast] = useState("");
   const [adding, setAdding] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { ref: editingIds } = useEditingIds();
+  const [selfUserId, setSelfUserId] = useState<string | undefined>();
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/months/${slug}/tracker`);
@@ -243,6 +246,51 @@ export function TrackerClient({
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then(r => r.json())
+      .then(d => {
+        if (d.user?.id) setSelfUserId(d.user.id);
+      })
+      .catch(() => {});
+  }, []);
+
+  const mergeRemoteRows = useCallback((incoming: Row[]) => {
+    setRows(prev => {
+      const editing = editingIds.current;
+      return incoming.map(newRow => {
+        if (editing.has(newRow.id)) {
+          return prev.find(r => r.id === newRow.id) ?? newRow;
+        }
+        return newRow;
+      });
+    });
+  }, [editingIds]);
+
+  useLiveSync({
+    monthSlug: slug,
+    selfUserId,
+    onEvent: async ev => {
+      if (
+        ev.type === "tracker.updated" ||
+        ev.type === "tracker.added" ||
+        ev.type === "tracker.deleted"
+      ) {
+        const res = await fetch(`/api/months/${slug}/tracker`);
+        const data = await res.json();
+        if (res.ok) mergeRemoteRows(data.rows);
+      }
+    }
+  });
+
+  function markEditing(rowId: string) {
+    editingIds.current.add(rowId);
+  }
+
+  function markDoneEditing(rowId: string) {
+    setTimeout(() => editingIds.current.delete(rowId), 300);
+  }
 
   function showToast(msg: string) {
     setToast(msg);
@@ -362,7 +410,11 @@ export function TrackerClient({
                         defaultValue={
                           row.actionDate ? formatDateUKShort(new Date(row.actionDate)) : ""
                         }
-                        onBlur={e => updateRow(row.id, { actionDate: e.target.value || null })}
+                        onFocus={() => markEditing(row.id)}
+                        onBlur={e => {
+                          updateRow(row.id, { actionDate: e.target.value || null });
+                          markDoneEditing(row.id);
+                        }}
                       />
                     </td>
                     <td
@@ -471,7 +523,11 @@ export function TrackerClient({
                         className="input-compact tracker-field"
                         aria-label="ORG 1 headcount"
                         defaultValue={row.org1Attended ?? ""}
-                        onBlur={e => updateRow(row.id, { org1Attended: e.target.value || null })}
+                        onFocus={() => markEditing(row.id)}
+                        onBlur={e => {
+                          updateRow(row.id, { org1Attended: e.target.value || null });
+                          markDoneEditing(row.id);
+                        }}
                       />
                     </td>
                     <td className="tracker-col-count">
@@ -479,7 +535,11 @@ export function TrackerClient({
                         className="input-compact tracker-field"
                         aria-label="ORG 2 headcount"
                         defaultValue={row.org2Attended ?? ""}
-                        onBlur={e => updateRow(row.id, { org2Attended: e.target.value || null })}
+                        onFocus={() => markEditing(row.id)}
+                        onBlur={e => {
+                          updateRow(row.id, { org2Attended: e.target.value || null });
+                          markDoneEditing(row.id);
+                        }}
                       />
                     </td>
                     <td className="tracker-col-actions">

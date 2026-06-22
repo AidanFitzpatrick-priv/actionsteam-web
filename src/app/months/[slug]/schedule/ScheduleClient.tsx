@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDateUKShort } from "@/lib/dates";
+import { useLiveSync, useEditingIds } from "@/hooks/useLiveSync";
 
 const DAY_NAMES_FULL = [
   "Monday",
@@ -64,12 +65,16 @@ function ScheduleSlotCell({
   slot,
   dropdowns,
   accountUsers,
-  onPatch
+  onPatch,
+  onEditStart,
+  onEditEnd
 }: {
   slot: Slot;
   dropdowns: Dropdowns;
   accountUsers: string[];
   onPatch: (id: string, patch: Record<string, unknown>) => void;
+  onEditStart: (id: string) => void;
+  onEditEnd: (id: string) => void;
 }) {
   const filled = slotIsFilled(slot);
   const options = bookedByOptionsForSlot(accountUsers, slot.bookedBy);
@@ -84,6 +89,8 @@ function ScheduleSlotCell({
         value={slot.typeName ?? ""}
         aria-label="Action type"
         title="Action type"
+        onFocus={() => onEditStart(slot.id)}
+        onBlur={() => onEditEnd(slot.id)}
         onChange={e => onPatch(slot.id, { typeName: e.target.value || null })}
       >
         <option value="">—</option>
@@ -99,6 +106,8 @@ function ScheduleSlotCell({
           value={slot.bookedBy ?? ""}
           aria-label="Booked by"
           title="Booked by"
+          onFocus={() => onEditStart(slot.id)}
+          onBlur={() => onEditEnd(slot.id)}
           onChange={e => onPatch(slot.id, { bookedBy: e.target.value || null })}
         >
           <option value="">—</option>
@@ -113,6 +122,8 @@ function ScheduleSlotCell({
           value={slot.orgName ?? ""}
           aria-label="Organisation"
           title="Organisation"
+          onFocus={() => onEditStart(slot.id)}
+          onBlur={() => onEditEnd(slot.id)}
           onChange={e => onPatch(slot.id, { orgName: e.target.value || null })}
         >
           <option value="">—</option>
@@ -133,6 +144,8 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
   const [dropdowns, setDropdowns] = useState<Dropdowns | null>(null);
   const [toast, setToast] = useState("");
   const [week, setWeek] = useState(0);
+  const { ref: editingIds } = useEditingIds();
+  const [selfUserId, setSelfUserId] = useState<string | undefined>();
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/months/${slug}/schedule`);
@@ -147,6 +160,45 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then(r => r.json())
+      .then(d => {
+        if (d.user?.id) setSelfUserId(d.user.id);
+      })
+      .catch(() => {});
+  }, []);
+
+  useLiveSync({
+    monthSlug: slug,
+    selfUserId,
+    onEvent: async ev => {
+      if (ev.type === "schedule.updated") {
+        const res = await fetch(`/api/months/${slug}/schedule`);
+        const data = await res.json();
+        if (res.ok) {
+          setSlots(prev => {
+            const editing = editingIds.current;
+            return data.slots.map((newSlot: Slot) => {
+              if (editing.has(newSlot.id)) {
+                return prev.find(s => s.id === newSlot.id) ?? newSlot;
+              }
+              return newSlot;
+            });
+          });
+        }
+      }
+    }
+  });
+
+  function markEditing(id: string) {
+    editingIds.current.add(id);
+  }
+
+  function markDoneEditing(id: string) {
+    setTimeout(() => editingIds.current.delete(id), 300);
+  }
 
   useEffect(() => {
     if (!calendar?.weeks.length) return;
@@ -264,6 +316,8 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
                         dropdowns={dropdowns}
                         accountUsers={bookedByOptions}
                         onPatch={patch}
+                        onEditStart={markEditing}
+                        onEditEnd={markDoneEditing}
                       />
                     );
                   })}

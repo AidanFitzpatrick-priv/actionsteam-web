@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { jsonError, jsonOk, requireRole, getMeta, ApiError } from "@/lib/api";
+import { publishAdminChange } from "@/services/live-sync";
 import * as months from "@/services/months";
 
 type Ctx = { params: Promise<{ slug: string }> };
@@ -23,6 +24,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         actorUserId: user.id,
         ipAddress: meta.ipAddress
       });
+      await publishAdminChange(user.id, "months:activate");
       return jsonOk({ month });
     }
 
@@ -32,6 +34,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         actorUserId: user.id,
         ipAddress: meta.ipAddress
       });
+      await publishAdminChange(user.id, "months:archive");
       return jsonOk({ month });
     }
 
@@ -45,6 +48,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         actorUserId: user.id,
         ipAddress: meta.ipAddress
       });
+      await publishAdminChange(user.id, "months:hard_delete");
       return jsonOk({ ok: true });
     }
 

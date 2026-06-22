@@ -10,6 +10,7 @@ function SignupForm() {
 
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [cityId, setCityId] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
@@ -37,7 +38,7 @@ function SignupForm() {
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ inviteToken, email, username, password, passwordConfirm })
+      body: JSON.stringify({ inviteToken, email, username, cityId, password, passwordConfirm })
     });
     const data = await res.json();
     if (!res.ok) {
@@ -58,6 +59,10 @@ function SignupForm() {
           <div className="field">
             <label htmlFor="email">Email</label>
             <input id="email" className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label htmlFor="cityId">City ID</label>
+            <input id="cityId" className="input" value={cityId} onChange={e => setCityId(e.target.value)} required maxLength={64} />
           </div>
           <div className="field">
             <label htmlFor="username">Username</label>

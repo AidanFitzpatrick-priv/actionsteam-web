@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError, jsonOk, requireRole, getMeta, ApiError } from "@/lib/api";
 import { revokeInvite, regenerateInvite } from "@/services/invites";
+import { publishInvitesChange } from "@/services/live-sync";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         actorRole: user.role,
         ipAddress: getMeta(req).ipAddress
       });
+      await publishInvitesChange(user.id);
       return jsonOk({ ok: true });
     }
 
@@ -28,6 +30,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         actorRole: user.role,
         ipAddress: getMeta(req).ipAddress
       });
+      await publishInvitesChange(user.id);
       return jsonOk({
         invite: {
           id: result.invite.id,

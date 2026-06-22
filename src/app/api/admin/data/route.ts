@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { jsonError, jsonOk, requireRole, getMeta, ApiError } from "@/lib/api";
+import { publishAdminChange } from "@/services/live-sync";
 import * as ref from "@/services/reference-data";
 
 const bodySchema = z.object({
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     if (body.entity === "staff") {
       if (body.action === "delete" && body.id) {
         await ref.softDeleteStaff({ id: body.id, actorUserId: user.id, ipAddress: meta.ipAddress });
+        await publishAdminChange(user.id, "data:staff");
         return jsonOk({ ok: true });
       }
       if (!body.name) throw new ApiError(400, "Name required");
@@ -48,12 +50,14 @@ export async function POST(req: NextRequest) {
         actorUserId: user.id,
         ipAddress: meta.ipAddress
       });
+      await publishAdminChange(user.id, "data:staff");
       return jsonOk({ item: row });
     }
 
     if (body.entity === "types") {
       if (body.action === "delete" && body.id) {
         await ref.softDeleteActionType({ id: body.id, actorUserId: user.id, ipAddress: meta.ipAddress });
+        await publishAdminChange(user.id, "data:types");
         return jsonOk({ ok: true });
       }
       if (!body.name || !body.colourHex) throw new ApiError(400, "Name and colour required");
@@ -64,12 +68,14 @@ export async function POST(req: NextRequest) {
         actorUserId: user.id,
         ipAddress: meta.ipAddress
       });
+      await publishAdminChange(user.id, "data:types");
       return jsonOk({ item: row });
     }
 
     if (body.entity === "gangs") {
       if (body.action === "delete" && body.id) {
         await ref.softDeleteGang({ id: body.id, actorUserId: user.id, ipAddress: meta.ipAddress });
+        await publishAdminChange(user.id, "data:gangs");
         return jsonOk({ ok: true });
       }
       if (!body.name) throw new ApiError(400, "Name required");
@@ -80,6 +86,7 @@ export async function POST(req: NextRequest) {
         actorUserId: user.id,
         ipAddress: meta.ipAddress
       });
+      await publishAdminChange(user.id, "data:gangs");
       return jsonOk({ item: row });
     }
 

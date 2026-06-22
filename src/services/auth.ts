@@ -8,6 +8,7 @@ export async function signupWithInvite(params: {
   inviteToken: string;
   email: string;
   username: string;
+  cityId: string;
   password: string;
   ipAddress?: string | null;
 }) {
@@ -16,11 +17,19 @@ export async function signupWithInvite(params: {
 
   const email = params.email.trim().toLowerCase();
   const username = params.username.trim();
+  const cityId = params.cityId.trim();
+
+  if (!cityId) throw new Error("City ID is required");
 
   const existing = await prisma.user.findFirst({
-    where: { OR: [{ email }, { username }] }
+    where: {
+      OR: [{ email }, { username }, { cityId }]
+    }
   });
-  if (existing) throw new Error("Email or username already taken");
+  if (existing) {
+    if (existing.cityId === cityId) throw new Error("City ID is already registered");
+    throw new Error("Email or username already taken");
+  }
 
   if (params.password.length < 10) {
     throw new Error("Password must be at least 10 characters");
@@ -31,6 +40,7 @@ export async function signupWithInvite(params: {
     data: {
       email,
       username,
+      cityId,
       passwordHash,
       role: "member"
     }

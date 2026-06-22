@@ -3,6 +3,7 @@ import { jsonError, jsonOk, requireRole, getMeta } from "@/lib/api";
 import { writeAuditLog } from "@/lib/audit";
 import { recalculateAllPoints } from "@/services/points";
 import { importBundledJuneSchedule } from "@/services/import-schedule";
+import { publishAdminChange, publishLiveEvent } from "@/services/live-sync";
 import { z } from "zod";
 
 export async function POST(req: NextRequest) {
@@ -25,10 +26,13 @@ export async function POST(req: NextRequest) {
         payload: { updated: result.updated },
         ipAddress: meta.ipAddress
       });
+      await publishAdminChange(user.id, "tools:import");
       return jsonOk({ ok: true, result });
     }
 
     const result = await recalculateAllPoints();
+    await publishLiveEvent({ type: "goals.updated", scope: "global", actorId: user.id });
+    await publishAdminChange(user.id, "tools:recalculate");
     await writeAuditLog({
       userId: user.id,
       action: "admin.recalculate",

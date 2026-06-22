@@ -24,6 +24,8 @@ model User {
   id                 String    @id @default(cuid())
   email              String    @unique
   username           String    @unique
+  cityId             String?   @unique @map("city_id")
+  discordId          String?   @map("discord_id")
   passwordHash       String    @map("password_hash")
   role               UserRole  @default(member)
   createdAt          DateTime  @default(now()) @map("created_at")
@@ -240,4 +242,19 @@ model AppSetting {
   value String
 
   @@map("app_settings")
+}
+
+model LiveEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  type      String
+  scope     String
+  monthId   String?  @map("month_id")
+  monthSlug String?  @map("month_slug")
+  entityId  String?  @map("entity_id")
+  payload   Json?
+  actorId   String?  @map("actor_id")
+
+  @@index([createdAt])
+  @@map("live_events")
 }

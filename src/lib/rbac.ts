@@ -37,3 +37,14 @@ export function canRestoreProduction(role: UserRole): boolean {
 export function formatRole(role: UserRole): string {
   return role.replace(/_/g, " ");
 }
+
+/** Goal scores: own row + everyone strictly below viewer rank; adm/management see all. */
+export function canViewGoalScoreRow(
+  viewerRole: UserRole,
+  targetRole: UserRole,
+  isOwnRow: boolean
+): boolean {
+  if (isOwnRow) return true;
+  if (viewerRole === "adm" || viewerRole === "management") return true;
+  return roleLevel(targetRole) < roleLevel(viewerRole);
+}

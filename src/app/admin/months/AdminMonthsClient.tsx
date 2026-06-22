@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Month = { id: string; name: string; slug: string; isActive: boolean; archivedAt: string | null };
 
@@ -18,6 +19,13 @@ export function AdminMonthsClient() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useLiveSync({
+    admin: true,
+    onEvent: ev => {
+      if (ev.type === "admin.updated") load();
+    }
+  });
 
   async function createMonth(e: FormEvent) {
     e.preventDefault();

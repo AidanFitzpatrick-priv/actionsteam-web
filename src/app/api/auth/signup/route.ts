@@ -4,10 +4,13 @@ import { jsonError, jsonOk, getMeta, ApiError } from "@/lib/api";
 import { signupWithInvite } from "@/services/auth";
 import { createSession, sessionCookieOptions, SESSION_COOKIE, REFRESH_COOKIE } from "@/lib/session";
 
+import { cityIdSchema } from "@/lib/user-fields";
+
 const schema = z.object({
   inviteToken: z.string().min(10),
   email: z.string().email(),
   username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_\-]+$/),
+  cityId: cityIdSchema,
   password: z.string().min(10),
   passwordConfirm: z.string().min(10)
 }).refine(d => d.password === d.passwordConfirm, {
@@ -23,6 +26,7 @@ export async function POST(req: NextRequest) {
       inviteToken: body.inviteToken,
       email: body.email,
       username: body.username,
+      cityId: body.cityId,
       password: body.password,
       ipAddress: meta.ipAddress
     });

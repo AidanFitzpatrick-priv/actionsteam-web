@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { jsonError, jsonOk, requireRole, getMeta } from "@/lib/api";
+import { publishAdminChange } from "@/services/live-sync";
 import * as months from "@/services/months";
 
 export async function GET() {
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
       actorUserId: user.id,
       ipAddress: meta.ipAddress
     });
+    await publishAdminChange(user.id, "months");
     return jsonOk({ month }, { status: 201 });
   } catch (e) {
     return jsonError(e);

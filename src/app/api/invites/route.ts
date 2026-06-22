@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { jsonError, jsonOk, requireRole, getMeta } from "@/lib/api";
 import { createInvite, listInvitesForUser } from "@/services/invites";
+import { publishInvitesChange } from "@/services/live-sync";
 
 const createSchema = z.object({
   expiresInDays: z.number().int().min(1).max(30).optional()
@@ -27,6 +28,8 @@ export async function POST(req: NextRequest) {
       expiresInDays: body.expiresInDays,
       ipAddress: getMeta(req).ipAddress
     });
+
+    await publishInvitesChange(user.id);
 
     return jsonOk({
       invite: {

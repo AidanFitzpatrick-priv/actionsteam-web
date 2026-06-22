@@ -25,6 +25,7 @@ async function main() {
     data: {
       email: email.toLowerCase(),
       username,
+      cityId: process.env.SEED_ADMIN_CITY_ID ?? "ADMIN-SEED",
       passwordHash,
       role: "management",
       mustResetPassword: mustReset
