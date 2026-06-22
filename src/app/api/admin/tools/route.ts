@@ -4,6 +4,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { recalculateAllPoints } from "@/services/points";
 import { importScheduleToTracker } from "@/services/schedule-sync";
 import { prisma } from "@/lib/db";
+import { importBundledJuneSchedule } from "@/services/import-schedule";
 import { z } from "zod";
 
 export async function POST(req: NextRequest) {
@@ -11,11 +12,24 @@ export async function POST(req: NextRequest) {
     const user = await requireRole("aux");
     const body = z
       .object({
-        action: z.enum(["recalculate", "import_schedule"]),
+        action: z.enum(["recalculate", "import_schedule", "import_june_sheet"]),
         monthId: z.string().optional()
       })
       .parse(await req.json());
     const meta = getMeta(req);
+
+    if (body.action === "import_june_sheet") {
+      const result = await importBundledJuneSchedule();
+      await writeAuditLog({
+        userId: user.id,
+        action: "admin.import_june_sheet",
+        entityType: "month",
+        entityId: result.month.id,
+        payload: { updated: result.updated, synced: result.synced },
+        ipAddress: meta.ipAddress
+      });
+      return jsonOk({ ok: true, result });
+    }
 
     if (body.action === "recalculate") {
       const result = await recalculateAllPoints();

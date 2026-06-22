@@ -18,7 +18,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "test": "vitest run",
-    "backup:run": "tsx scripts/nightly-backup.ts"
+    "backup:run": "tsx scripts/nightly-backup.ts",
+    "import:schedule": "tsx scripts/import-schedule.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",
