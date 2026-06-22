@@ -22,7 +22,6 @@ export function inviteStatus(invite: {
 
 export async function createInvite(params: {
   createdByUserId: string;
-  defaultRole?: UserRole;
   expiresInDays?: number;
   maxUses?: number;
   ipAddress?: string | null;
@@ -39,7 +38,7 @@ export async function createInvite(params: {
       createdByUserId: params.createdByUserId,
       expiresAt,
       maxUses: params.maxUses ?? 1,
-      defaultRole: params.defaultRole ?? "member"
+      defaultRole: "member"
     },
     include: {
       createdBy: { select: { id: true, username: true, role: true } }
@@ -143,7 +142,6 @@ export async function regenerateInvite(params: {
 
   return createInvite({
     createdByUserId: params.actorUserId,
-    defaultRole: old.defaultRole,
     expiresInDays: Math.max(1, Math.ceil((old.expiresAt.getTime() - Date.now()) / 86400000)),
     maxUses: old.maxUses,
     ipAddress: params.ipAddress

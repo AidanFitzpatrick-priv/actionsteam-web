@@ -37,5 +37,3 @@ export function canRestoreProduction(role: UserRole): boolean {
 export function formatRole(role: UserRole): string {
   return role.replace(/_/g, " ");
 }
-
-export const INVITE_DEFAULT_ROLE_OPTIONS: UserRole[] = ["member", "sub_lead"];

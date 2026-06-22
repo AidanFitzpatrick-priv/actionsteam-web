@@ -10,7 +10,6 @@ export async function GET(req: NextRequest) {
     if (!result.ok) return jsonOk({ valid: false, reason: result.reason });
     return jsonOk({
       valid: true,
-      defaultRole: result.invite.defaultRole,
       invitedBy: result.invite.createdBy.username
     });
   } catch (err) {

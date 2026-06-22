@@ -10,7 +10,6 @@ type InviteRow = {
   createdAt: string;
   expiresAt: string;
   status: string;
-  defaultRole: UserRole;
   usedBy: { username: string; at: string } | null;
 };
 
@@ -19,7 +18,6 @@ export function InvitesAdminClient({ viewerRole }: { viewerRole: UserRole }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [newLink, setNewLink] = useState("");
-  const [defaultRole, setDefaultRole] = useState<"member" | "sub_lead">("member");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,11 +38,7 @@ export function InvitesAdminClient({ viewerRole }: { viewerRole: UserRole }) {
     e.preventDefault();
     setError("");
     setNewLink("");
-    const res = await fetch("/api/invites", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ defaultRole })
-    });
+    const res = await fetch("/api/invites", { method: "POST" });
     const data = await res.json();
     if (!res.ok) {
       setError(data.error ?? "Failed to create invite");
@@ -77,17 +71,10 @@ export function InvitesAdminClient({ viewerRole }: { viewerRole: UserRole }) {
         <h2>Create invite link</h2>
         <p className="muted">
           {canViewAllInvites(viewerRole)
-            ? "You see all team invites (aux+)."
-            : "You see invites you created."}
+            ? "You see all team invites (aux+). New sign-ups are always members."
+            : "You see invites you created. New sign-ups are always members."}
         </p>
-        <form onSubmit={createInvite} className="grid-2" style={{ alignItems: "end", marginTop: 16 }}>
-          <div className="field" style={{ marginBottom: 0 }}>
-            <label htmlFor="defaultRole">New member role</label>
-            <select id="defaultRole" className="select" value={defaultRole} onChange={e => setDefaultRole(e.target.value as "member" | "sub_lead")}>
-              <option value="member">Member</option>
-              <option value="sub_lead">Sub Lead</option>
-            </select>
-          </div>
+        <form onSubmit={createInvite} style={{ marginTop: 16 }}>
           <button type="submit" className="btn">Create invite link</button>
         </form>
         {newLink && (
@@ -111,7 +98,6 @@ export function InvitesAdminClient({ viewerRole }: { viewerRole: UserRole }) {
                 <th>Created</th>
                 <th>Expires</th>
                 <th>Status</th>
-                <th>Role</th>
                 <th>Used by</th>
                 <th></th>
               </tr>
@@ -123,7 +109,6 @@ export function InvitesAdminClient({ viewerRole }: { viewerRole: UserRole }) {
                   <td>{new Date(inv.createdAt).toLocaleDateString("en-GB")}</td>
                   <td>{new Date(inv.expiresAt).toLocaleDateString("en-GB")}</td>
                   <td><span className={badgeClass(inv.status)}>{inv.status}</span></td>
-                  <td>{inv.defaultRole.replace("_", " ")}</td>
                   <td>{inv.usedBy ? `${inv.usedBy.username} (${new Date(inv.usedBy.at).toLocaleDateString("en-GB")})` : "—"}</td>
                   <td>
                     {inv.status === "pending" && (
@@ -136,7 +121,7 @@ export function InvitesAdminClient({ viewerRole }: { viewerRole: UserRole }) {
                 </tr>
               ))}
               {!invites.length && (
-                <tr><td colSpan={7} className="muted">No invites yet.</td></tr>
+                <tr><td colSpan={6} className="muted">No invites yet.</td></tr>
               )}
             </tbody>
           </table>

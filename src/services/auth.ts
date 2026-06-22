@@ -1,4 +1,3 @@
-import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
 import { writeAuditLog } from "@/lib/audit";
@@ -33,7 +32,7 @@ export async function signupWithInvite(params: {
       email,
       username,
       passwordHash,
-      role: validation.invite.defaultRole as UserRole
+      role: "member"
     }
   });
 
