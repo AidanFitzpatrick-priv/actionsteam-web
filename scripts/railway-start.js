@@ -1,9 +1,9 @@
 /**
  * Production start for Railway:
- * 1. Start Next.js immediately (so healthcheck can reach PORT)
- * 2. Apply schema in background (prisma db push)
+ * 1. Apply schema (prisma db push) — must complete before serving DB-backed routes
+ * 2. Start Next.js
  */
-const { exec, spawn } = require("child_process");
+const { execSync, spawn } = require("child_process");
 
 const port = process.env.PORT || "3000";
 
@@ -15,6 +15,18 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+try {
+  console.log("[start] Applying database schema…");
+  execSync("npx prisma db push --accept-data-loss --skip-generate", {
+    stdio: "inherit",
+    env: process.env
+  });
+  console.log("[start] Database schema applied.");
+} catch (err) {
+  console.error("[start] prisma db push failed:", err.message ?? err);
+  process.exit(1);
+}
+
 console.log(`[start] Starting Next.js on 0.0.0.0:${port}…`);
 const child = spawn("npx", ["next", "start", "-H", "0.0.0.0", "-p", port], {
   stdio: "inherit",
@@ -23,12 +35,3 @@ const child = spawn("npx", ["next", "start", "-H", "0.0.0.0", "-p", port], {
 });
 
 child.on("exit", code => process.exit(code ?? 0));
-
-console.log("[start] Applying database schema in background…");
-exec("npx prisma db push --skip-generate", { env: process.env }, (err, stdout, stderr) => {
-  if (err) {
-    console.error("[start] prisma db push failed:", stderr || err.message);
-    return;
-  }
-  console.log("[start] Database schema applied.");
-});
