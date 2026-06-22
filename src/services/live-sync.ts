@@ -5,7 +5,7 @@ import type { LiveEventPayload, LiveEventRecord, LiveEventScope } from "@/lib/li
 
 const RETAIN_MS = 60 * 60 * 1000;
 
-/** Insert a live event (fire-and-forget). Works across Railway instances via DB polling. */
+/** Insert a live event. Works across Railway instances via DB polling. */
 export async function publishLiveEvent(event: LiveEventPayload): Promise<void> {
   try {
     await prisma.liveEvent.create({
@@ -22,8 +22,8 @@ export async function publishLiveEvent(event: LiveEventPayload): Promise<void> {
 
     const cutoff = new Date(Date.now() - RETAIN_MS);
     await prisma.liveEvent.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch(() => {});
-  } catch {
-    // Non-fatal — app works without live sync if table missing during deploy
+  } catch (err) {
+    console.error("[live-sync] publish failed:", err instanceof Error ? err.message : err);
   }
 }
 
@@ -71,10 +71,19 @@ export async function fetchLiveEventsSince(
       if (ev.scope === "admin" && !filters?.admin && !isFullAdmin(role)) return false;
       if (ev.scope === "invites" && !filters?.invites && !canCreateInvites(role)) return false;
       if (ev.scope === "month" && filters?.monthSlug && ev.monthSlug !== filters.monthSlug) return false;
+      if (
+        filters?.monthSlug &&
+        ev.monthSlug &&
+        ev.monthSlug !== filters.monthSlug &&
+        (ev.type === "stats.updated" || ev.type === "goals.updated")
+      ) {
+        return false;
+      }
       return eventVisibleToUser(ev, role, { monthSlug: filters?.monthSlug });
     });
 }
 
+/** Immediate broadcast for tracker UI sync (must not wait on points recalc). */
 export async function publishMonthTrackerChange(params: {
   monthId: string;
   monthSlug: string;
@@ -97,7 +106,14 @@ export async function publishMonthTrackerChange(params: {
     entityId: params.rowId,
     actorId: params.actorId
   });
+}
 
+/** After points recalc — stats + goals pages refresh. */
+export async function publishTrackerDerivedUpdates(params: {
+  monthId: string;
+  monthSlug: string;
+  actorId: string;
+}) {
   await publishLiveEvent({
     type: "stats.updated",
     scope: "global",
@@ -129,7 +145,13 @@ export async function publishScheduleChange(params: {
     entityId: params.slotId,
     actorId: params.actorId
   });
+}
 
+export async function publishScheduleDerivedUpdates(params: {
+  monthId: string;
+  monthSlug: string;
+  actorId: string;
+}) {
   await publishLiveEvent({
     type: "goals.updated",
     scope: "global",

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDateUKShort } from "@/lib/dates";
-import { useLiveSync, useEditingIds } from "@/hooks/useLiveSync";
+import { useLiveSync, useEditingIds, liveFetchOpts } from "@/hooks/useLiveSync";
 
 const DAY_NAMES_FULL = [
   "Monday",
@@ -148,7 +148,7 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
   const [selfUserId, setSelfUserId] = useState<string | undefined>();
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/months/${slug}/schedule`);
+    const res = await fetch(`/api/months/${slug}/schedule`, liveFetchOpts);
     const data = await res.json();
     if (res.ok) {
       setSlots(data.slots);
@@ -170,25 +170,30 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
       .catch(() => {});
   }, []);
 
+  const refreshFromServer = useCallback(async () => {
+    const res = await fetch(`/api/months/${slug}/schedule`, liveFetchOpts);
+    const data = await res.json();
+    if (!res.ok) return;
+    if (editingIds.current.size === 0) {
+      setSlots(data.slots);
+    } else {
+      setSlots(prev => {
+        const editing = editingIds.current;
+        return data.slots.map((newSlot: Slot) => {
+          if (editing.has(newSlot.id)) {
+            return prev.find(s => s.id === newSlot.id) ?? newSlot;
+          }
+          return newSlot;
+        });
+      });
+    }
+  }, [slug, editingIds]);
+
   useLiveSync({
     monthSlug: slug,
     selfUserId,
-    onEvent: async ev => {
-      if (ev.type === "schedule.updated") {
-        const res = await fetch(`/api/months/${slug}/schedule`);
-        const data = await res.json();
-        if (res.ok) {
-          setSlots(prev => {
-            const editing = editingIds.current;
-            return data.slots.map((newSlot: Slot) => {
-              if (editing.has(newSlot.id)) {
-                return prev.find(s => s.id === newSlot.id) ?? newSlot;
-              }
-              return newSlot;
-            });
-          });
-        }
-      }
+    onEvent: ev => {
+      if (ev.type === "schedule.updated") void refreshFromServer();
     }
   });
 

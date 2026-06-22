@@ -2,11 +2,15 @@ import { NextRequest } from "next/server";
 import { jsonError, jsonOk, requireRole } from "@/lib/api";
 import { fetchLiveEventsSince } from "@/services/live-sync";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const user = await requireRole("member");
     const sinceParam = req.nextUrl.searchParams.get("since");
-    const since = sinceParam ? new Date(sinceParam) : new Date(Date.now() - 5000);
+    const since = sinceParam
+      ? new Date(sinceParam)
+      : new Date(Date.now() - 30_000);
     if (isNaN(since.getTime())) {
       return jsonOk({ events: [] });
     }

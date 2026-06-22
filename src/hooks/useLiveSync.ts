@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { LiveEventRecord } from "@/lib/live-events";
 
 type Options = {
-  /** Poll interval ms (default 2000). */
+  /** Poll interval ms (default 1500). */
   intervalMs?: number;
   monthSlug?: string;
   admin?: boolean;
@@ -14,19 +14,23 @@ type Options = {
   onEvent: (event: LiveEventRecord) => void;
 };
 
+const FETCH_OPTS: RequestInit = { cache: "no-store", credentials: "same-origin" };
+
 /**
  * Polls /api/live/events for cross-user updates (~1–2s latency).
  * Works on Railway multi-instance (events stored in Postgres).
  */
 export function useLiveSync({
-  intervalMs = 2000,
+  intervalMs = 1500,
   monthSlug,
   admin,
   invites,
   selfUserId,
   onEvent
 }: Options) {
-  const sinceRef = useRef(new Date().toISOString());
+  /** Start 30s in the past so we don't miss events during page load. */
+  const sinceRef = useRef(new Date(Date.now() - 30_000).toISOString());
+  const seenIds = useRef(new Set<string>());
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
@@ -41,16 +45,30 @@ export function useLiveSync({
       if (invites) params.set("invites", "1");
 
       try {
-        const res = await fetch(`/api/live/events?${params}`);
+        const res = await fetch(`/api/live/events?${params}`, FETCH_OPTS);
         const data = await res.json();
         if (!res.ok || cancelled || !Array.isArray(data.events)) return;
 
+        let latestCreatedAt = sinceRef.current;
+
         for (const ev of data.events as LiveEventRecord[]) {
+          if (seenIds.current.has(ev.id)) continue;
+          seenIds.current.add(ev.id);
+          if (ev.createdAt > latestCreatedAt) latestCreatedAt = ev.createdAt;
+
           if (selfUserId && ev.actorId === selfUserId) continue;
           onEventRef.current(ev);
         }
+
         if (data.events.length) {
-          sinceRef.current = (data.events as LiveEventRecord[])[data.events.length - 1].createdAt;
+          // 2s overlap so boundary timestamps don't drop events
+          sinceRef.current = new Date(new Date(latestCreatedAt).getTime() - 2000).toISOString();
+        }
+
+        if (seenIds.current.size > 500) {
+          seenIds.current = new Set(
+            (data.events as LiveEventRecord[]).slice(-100).map(e => e.id)
+          );
         }
       } catch {
         // ignore network blips
@@ -86,3 +104,5 @@ export function useEditingIds() {
     }
   };
 }
+
+export { FETCH_OPTS as liveFetchOpts };

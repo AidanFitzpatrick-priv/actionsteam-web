@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateUKShort } from "@/lib/dates";
-import { useLiveSync, useEditingIds } from "@/hooks/useLiveSync";
+import { useLiveSync, useEditingIds, liveFetchOpts } from "@/hooks/useLiveSync";
 
 type Row = {
   id: string;
@@ -235,7 +235,7 @@ export function TrackerClient({
   const [selfUserId, setSelfUserId] = useState<string | undefined>();
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/months/${slug}/tracker`);
+    const res = await fetch(`/api/months/${slug}/tracker`, liveFetchOpts);
     const data = await res.json();
     if (res.ok) {
       setRows(data.rows);
@@ -256,30 +256,43 @@ export function TrackerClient({
       .catch(() => {});
   }, []);
 
-  const mergeRemoteRows = useCallback((incoming: Row[]) => {
-    setRows(prev => {
-      const editing = editingIds.current;
-      return incoming.map(newRow => {
-        if (editing.has(newRow.id)) {
-          return prev.find(r => r.id === newRow.id) ?? newRow;
-        }
-        return newRow;
+  const mergeRemoteRows = useCallback(
+    (incoming: Row[]) => {
+      setRows(prev => {
+        const editing = editingIds.current;
+        if (editing.size === 0) return incoming;
+        return incoming.map(newRow => {
+          if (editing.has(newRow.id)) {
+            return prev.find(r => r.id === newRow.id) ?? newRow;
+          }
+          return newRow;
+        });
       });
-    });
-  }, [editingIds]);
+    },
+    [editingIds]
+  );
+
+  const refreshFromServer = useCallback(async () => {
+    const res = await fetch(`/api/months/${slug}/tracker`, liveFetchOpts);
+    const data = await res.json();
+    if (!res.ok) return;
+    if (editingIds.current.size === 0) {
+      setRows(data.rows);
+    } else {
+      mergeRemoteRows(data.rows);
+    }
+  }, [slug, mergeRemoteRows, editingIds]);
 
   useLiveSync({
     monthSlug: slug,
     selfUserId,
-    onEvent: async ev => {
+    onEvent: ev => {
       if (
         ev.type === "tracker.updated" ||
         ev.type === "tracker.added" ||
         ev.type === "tracker.deleted"
       ) {
-        const res = await fetch(`/api/months/${slug}/tracker`);
-        const data = await res.json();
-        if (res.ok) mergeRemoteRows(data.rows);
+        void refreshFromServer();
       }
     }
   });

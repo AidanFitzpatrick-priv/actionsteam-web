@@ -13,7 +13,7 @@ import { buildAllStatsTables } from "@/services/stats";
 import { recalculateAllPoints } from "@/services/points";
 import { parseDate } from "@/lib/dates";
 import { writeAuditLog } from "@/lib/audit";
-import { publishMonthTrackerChange } from "@/services/live-sync";
+import { publishMonthTrackerChange, publishTrackerDerivedUpdates } from "@/services/live-sync";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
@@ -82,7 +82,6 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (body.action === "delete") {
       if (!body.rowId) throw new ApiError(400, "rowId required");
       await softDeleteTrackerRow(body.rowId);
-      await recalculateAllPoints();
       await publishMonthTrackerChange({
         monthId: month.id,
         monthSlug: slug,
@@ -90,6 +89,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         action: "deleted",
         rowId: body.rowId
       });
+      void recalculateAllPoints().then(() =>
+        publishTrackerDerivedUpdates({
+          monthId: month.id,
+          monthSlug: slug,
+          actorId: user.id
+        })
+      );
       return jsonOk({ ok: true });
     }
 
@@ -126,7 +132,6 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const statsRows = await loadStatsForMonth(month.id);
     const stats = buildAllStatsTables(statsRows, statsRows);
-    await recalculateAllPoints();
 
     await publishMonthTrackerChange({
       monthId: month.id,
@@ -135,6 +140,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       action: "updated",
       rowId: row.id
     });
+
+    void recalculateAllPoints().then(() =>
+      publishTrackerDerivedUpdates({
+        monthId: month.id,
+        monthSlug: slug,
+        actorId: user.id
+      })
+    );
 
     return jsonOk({ row: { ...row, colour: colorForType(row.typeName, colorMap) }, toast, stats });
   } catch (e) {

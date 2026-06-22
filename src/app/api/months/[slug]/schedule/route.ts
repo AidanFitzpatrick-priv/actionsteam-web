@@ -70,15 +70,21 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     });
 
     const { recalculateAllPoints } = await import("@/services/points");
-    await recalculateAllPoints();
-
-    const { publishScheduleChange } = await import("@/services/live-sync");
+    const { publishScheduleChange, publishScheduleDerivedUpdates } = await import("@/services/live-sync");
     await publishScheduleChange({
       monthId: month.id,
       monthSlug: slug,
       actorId: user.id,
       slotId: slot.id
     });
+
+    void recalculateAllPoints().then(() =>
+      publishScheduleDerivedUpdates({
+        monthId: month.id,
+        monthSlug: slug,
+        actorId: user.id
+      })
+    );
 
     const colorMap = await getTypeColorMap();
     return jsonOk({
