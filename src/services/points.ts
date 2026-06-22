@@ -2,13 +2,18 @@
  * Port of Points.js + GoalTrackers.js — weekly Mon–Sun action & booking points.
  */
 import { prisma } from "@/lib/db";
-import { parseDate, isSameYMD } from "@/lib/dates";
+import { isSameYMD } from "@/lib/dates";
 import { cleanName, normalizeStatus, splitPeopleList } from "@/lib/names";
+import { ensureGoalWeekDates } from "@/services/goal-week";
 
 type ScoreMap = Record<string, number[]>;
 
-function ensureScores(scores: ScoreMap, name: string, days: number) {
-  if (!scores[name]) scores[name] = Array(days).fill(0);
+function initScores(keys: string[]): ScoreMap {
+  const scores: ScoreMap = {};
+  keys.forEach(k => {
+    scores[k] = [0, 0, 0, 0, 0, 0, 0];
+  });
+  return scores;
 }
 
 function addPoints(scores: ScoreMap, nameStr: unknown, dayIdx: number, delta: number) {
@@ -17,6 +22,28 @@ function addPoints(scores: ScoreMap, nameStr: unknown, dayIdx: number, delta: nu
     if (!k || !scores[k]) return;
     scores[k][dayIdx] += delta;
   });
+}
+
+/** Staff + account users — spreadsheet goal sheet rows include everyone who can score. */
+async function buildScoreParticipants(): Promise<Map<string, string>> {
+  const [staff, users] = await Promise.all([
+    prisma.staff.findMany({ where: { deletedAt: null, active: true } }),
+    prisma.user.findMany({
+      where: { disabledAt: null },
+      select: { username: true }
+    })
+  ]);
+
+  const displayByKey = new Map<string, string>();
+  for (const s of staff) {
+    const k = cleanName(s.name);
+    if (k) displayByKey.set(k, s.name);
+  }
+  for (const u of users) {
+    const k = cleanName(u.username);
+    if (k && !displayByKey.has(k)) displayByKey.set(k, u.username);
+  }
+  return displayByKey;
 }
 
 /** accumulateActionPointsFromTracker_ */
@@ -49,7 +76,7 @@ export function accumulateActionPointsFromTracker(
       status.has("org 2 didn't attend")
     ) {
       addPoints(scores, r.hostedBy, dayIdx, 2);
-      addPoints(scores, r.attended.join(", "), dayIdx, 1);
+      addPoints(scores, r.attended, dayIdx, 1);
     }
   }
 }
@@ -68,26 +95,22 @@ export function accumulateBookingPointsFromSlots(
 }
 
 export async function recalculateAllPoints() {
-  const staff = await prisma.staff.findMany({ where: { deletedAt: null, active: true } });
-  const staffKeys = staff.map(s => cleanName(s.name)).filter(Boolean);
-
-  const actionScores: ScoreMap = {};
-  const bookingScores: ScoreMap = {};
-  staffKeys.forEach(k => {
-    actionScores[k] = [0, 0, 0, 0, 0, 0, 0];
-    bookingScores[k] = [0, 0, 0, 0, 0, 0, 0];
-  });
-
   const activeMonth = await prisma.month.findFirst({
     where: { isActive: true, archivedAt: null }
   });
+  if (!activeMonth) {
+    return { actionScores: {}, bookingScores: {}, weekDates: Array(7).fill(null) };
+  }
 
-  const weekDates = activeMonth
-    ? await getWeekDatesForMonth(activeMonth.id)
-    : Array(7).fill(null);
+  const displayByKey = await buildScoreParticipants();
+  const keys = [...displayByKey.keys()];
+  const actionScores = initScores(keys);
+  const bookingScores = initScores(keys);
+
+  const weekDates = await ensureGoalWeekDates(activeMonth);
 
   const trackerRows = await prisma.trackerRow.findMany({
-    where: { deletedAt: null },
+    where: { monthId: activeMonth.id, deletedAt: null },
     select: {
       actionDate: true,
       status: true,
@@ -99,47 +122,36 @@ export async function recalculateAllPoints() {
   accumulateActionPointsFromTracker(trackerRows, actionScores, weekDates);
 
   const scheduleSlots = await prisma.scheduleSlot.findMany({
-    where: { deletedAt: null },
+    where: { monthId: activeMonth.id, deletedAt: null },
     select: { dateBooked: true, bookedBy: true }
   });
   accumulateBookingPointsFromSlots(scheduleSlots, bookingScores, weekDates);
 
-  if (activeMonth) {
-    await persistGoalScores(activeMonth.id, "actions", actionScores, staff);
-    await persistGoalScores(activeMonth.id, "bookings", bookingScores, staff);
-  }
+  await persistGoalScores(activeMonth.id, "actions", actionScores, displayByKey);
+  await persistGoalScores(activeMonth.id, "bookings", bookingScores, displayByKey);
 
   return { actionScores, bookingScores, weekDates };
-}
-
-async function getWeekDatesForMonth(monthId: string): Promise<(Date | null)[]> {
-  const week = await prisma.goalWeek.findFirst({ where: { monthId } });
-  if (week?.weekDates?.length === 7) {
-    return week.weekDates.map(d => parseDate(d));
-  }
-  return Array(7).fill(null);
 }
 
 async function persistGoalScores(
   monthId: string,
   kind: string,
   scores: ScoreMap,
-  staff: Array<{ name: string }>
+  displayByKey: Map<string, string>
 ) {
-  for (const s of staff) {
-    const k = cleanName(s.name);
+  for (const [k, displayName] of displayByKey) {
     const points = scores[k] ?? [0, 0, 0, 0, 0, 0, 0];
     for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
       await prisma.goalScore.upsert({
         where: {
           staffName_monthId_kind_dayIndex: {
-            staffName: s.name,
+            staffName: displayName,
             monthId,
             kind,
             dayIndex
           }
         },
-        create: { staffName: s.name, monthId, kind, dayIndex, points: points[dayIndex] },
+        create: { staffName: displayName, monthId, kind, dayIndex, points: points[dayIndex] },
         update: { points: points[dayIndex] }
       });
     }

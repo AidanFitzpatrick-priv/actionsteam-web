@@ -69,6 +69,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       orgName: body.orgName
     });
 
+    const { recalculateAllPoints } = await import("@/services/points");
+    await recalculateAllPoints();
+
     const colorMap = await getTypeColorMap();
     return jsonOk({
       slot: { ...slot, colour: colorForType(slot.typeName, colorMap) }

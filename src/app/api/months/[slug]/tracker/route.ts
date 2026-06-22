@@ -10,6 +10,7 @@ import {
   loadStatsForMonth
 } from "@/services/tracker";
 import { buildAllStatsTables } from "@/services/stats";
+import { recalculateAllPoints } from "@/services/points";
 import { parseDate } from "@/lib/dates";
 import { writeAuditLog } from "@/lib/audit";
 
@@ -73,6 +74,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (body.action === "delete") {
       if (!body.rowId) throw new ApiError(400, "rowId required");
       await softDeleteTrackerRow(body.rowId);
+      await recalculateAllPoints();
       return jsonOk({ ok: true });
     }
 
@@ -109,6 +111,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const statsRows = await loadStatsForMonth(month.id);
     const stats = buildAllStatsTables(statsRows, statsRows);
+    await recalculateAllPoints();
 
     return jsonOk({ row: { ...row, colour: colorForType(row.typeName, colorMap) }, toast, stats });
   } catch (e) {

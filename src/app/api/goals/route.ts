@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { jsonError, jsonOk, requireRole } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { formatDateUK } from "@/lib/dates";
+import { cleanName } from "@/lib/names";
+import { ensureGoalWeekDates } from "@/services/goal-week";
+import { recalculateAllPoints } from "@/services/points";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,13 +15,21 @@ export async function GET(req: NextRequest) {
     });
     if (!month) return jsonOk({ month: null, weekDates: [], scores: [] });
 
-    const week = await prisma.goalWeek.findFirst({ where: { monthId: month.id } });
-    const weekDates = (week?.weekDates ?? []).map(d => formatDateUK(d));
-
-    const scores = await prisma.goalScore.findMany({
+    let scores = await prisma.goalScore.findMany({
       where: { monthId: month.id, kind },
       orderBy: [{ staffName: "asc" }, { dayIndex: "asc" }]
     });
+
+    if (scores.length === 0) {
+      await recalculateAllPoints();
+      scores = await prisma.goalScore.findMany({
+        where: { monthId: month.id, kind },
+        orderBy: [{ staffName: "asc" }, { dayIndex: "asc" }]
+      });
+    }
+
+    const weekDateObjs = await ensureGoalWeekDates(month);
+    const weekDates = weekDateObjs.map(d => (d ? formatDateUK(d) : ""));
 
     const byStaff = new Map<string, number[]>();
     scores.forEach(s => {
@@ -28,17 +39,11 @@ export async function GET(req: NextRequest) {
 
     const ownOnly = true;
     const rows = [...byStaff.entries()]
-      .filter(([name]) => !ownOnly || cleanNameLocal(name) === cleanNameLocal(user.username))
+      .filter(([name]) => !ownOnly || cleanName(name) === cleanName(user.username))
       .map(([staffName, points]) => ({ staffName, points, total: points.reduce((a, b) => a + b, 0) }));
 
     return jsonOk({ month, weekDates, scores: rows, kind });
   } catch (e) {
     return jsonError(e);
   }
-}
-
-function cleanNameLocal(raw: string) {
-  let s = raw.trim().toLowerCase();
-  if (s.includes("-")) s = s.split("-")[0].trim();
-  return s;
 }
