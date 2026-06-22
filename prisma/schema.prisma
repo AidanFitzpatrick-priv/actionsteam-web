@@ -120,6 +120,7 @@ model Month {
   id         String    @id @default(cuid())
   name       String
   slug       String    @unique
+  year       Int?
   isActive   Boolean   @default(false) @map("is_active")
   createdAt  DateTime  @default(now()) @map("created_at")
   archivedAt DateTime? @map("archived_at")
@@ -170,6 +171,7 @@ model ScheduleSlot {
   rowIndex      Int       @map("row_index")
   timeText      String?   @map("time_text")
   typeName      String?   @map("type_name")
+  actionDayDate DateTime? @map("action_day_date") @db.Date
   dateBooked    DateTime? @map("date_booked") @db.Date
   bookedBy      String?   @map("booked_by")
   orgName       String?   @map("org_name")

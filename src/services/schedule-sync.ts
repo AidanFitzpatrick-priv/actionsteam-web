@@ -4,11 +4,13 @@
  */
 import { prisma } from "@/lib/db";
 import { parseTimeMinutes, toDateOnly } from "@/lib/dates";
+import { lookupActionDate } from "@/services/schedule-calendar";
 
 type SlotUpdate = {
   typeName?: string | null;
   orgName?: string | null;
   timeText?: string | null;
+  actionDayDate?: Date | null;
   dateBooked?: Date | null;
   bookedBy?: string | null;
 };
@@ -94,7 +96,9 @@ export async function syncScheduleSlotToTracker(slotId: string) {
   const linked = slot.trackerRows[0] ?? null;
 
   if (type && org) {
-    const actionDate = slot.dateBooked ? toDateOnly(slot.dateBooked) : null;
+    const actionDate =
+      (slot.actionDayDate ? toDateOnly(slot.actionDayDate) : null) ??
+      lookupActionDate(slot.month, slot.weekIndex, slot.dayIndex);
     if (!actionDate) return;
 
     if (linked) {

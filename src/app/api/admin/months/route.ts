@@ -16,10 +16,16 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const user = await requireRole("aux");
-    const body = z.object({ name: z.string().min(1).max(80) }).parse(await req.json());
+    const body = z
+      .object({
+        name: z.string().min(1).max(80),
+        year: z.number().int().min(2000).max(2100).optional()
+      })
+      .parse(await req.json());
     const meta = getMeta(req);
     const month = await months.createMonth({
       name: body.name,
+      year: body.year,
       actorUserId: user.id,
       ipAddress: meta.ipAddress
     });

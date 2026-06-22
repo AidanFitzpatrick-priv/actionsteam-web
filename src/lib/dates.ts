@@ -53,6 +53,14 @@ export function formatDateUK(d: Date | null | undefined): string {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+export function formatDateUKShort(d: Date | null | undefined): string {
+  if (!d) return "";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${dd}/${mm}/${yy}`;
+}
+
 export function toDateOnly(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
 }

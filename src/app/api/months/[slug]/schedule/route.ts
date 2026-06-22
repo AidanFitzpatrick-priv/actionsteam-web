@@ -4,7 +4,10 @@ import { jsonError, jsonOk, requireRole, ApiError } from "@/lib/api";
 import { getMonthBySlug } from "@/services/months";
 import { getScheduleSlots, getTypeColorMap, colorForType } from "@/services/schedule";
 import { getDropdownOptions } from "@/services/reference-data";
+import { calendarForApi } from "@/services/schedule-calendar";
 import { parseDate } from "@/lib/dates";
+import { resolveMonthYear } from "@/lib/schedule-calendar";
+import { prisma } from "@/lib/db";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
@@ -12,8 +15,15 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   try {
     await requireRole("member");
     const { slug } = await ctx.params;
-    const month = await getMonthBySlug(slug);
+    let month = await getMonthBySlug(slug);
     if (!month || month.archivedAt) throw new ApiError(404, "Month not found");
+
+    if (!month.year) {
+      month = await prisma.month.update({
+        where: { id: month.id },
+        data: { year: resolveMonthYear(month) }
+      });
+    }
 
     const [slots, colorMap, dropdowns] = await Promise.all([
       getScheduleSlots(month.id),
@@ -23,6 +33,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
     return jsonOk({
       month,
+      calendar: calendarForApi(month),
       dropdowns,
       slots: slots.map(s => ({
         ...s,

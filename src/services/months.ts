@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
 import { slugifyMonth } from "@/lib/names";
-import { SCHEDULE } from "@/lib/config";
+import { parseMonthLabel } from "@/lib/schedule-calendar";
+import { seedScheduleSlotsForMonth } from "@/services/schedule-calendar";
 
 export async function listMonths(includeArchived = false) {
   return prisma.month.findMany({
@@ -14,49 +15,33 @@ export async function getMonthBySlug(slug: string) {
   return prisma.month.findUnique({ where: { slug } });
 }
 
-async function seedScheduleSlots(monthId: string) {
-  const slots: {
-    monthId: string;
-    weekIndex: number;
-    dayIndex: number;
-    rowIndex: number;
-  }[] = [];
-
-  for (let w = 0; w < SCHEDULE.WEEKS_DEFAULT; w++) {
-    for (let d = 0; d < SCHEDULE.DAYS_PER_WEEK; d++) {
-      for (let r = 0; r < SCHEDULE.DATA_ROWS; r++) {
-        slots.push({ monthId, weekIndex: w, dayIndex: d, rowIndex: r });
-      }
-    }
-  }
-
-  await prisma.scheduleSlot.createMany({ data: slots, skipDuplicates: true });
-}
-
 export async function createMonth(params: {
   name: string;
+  year?: number;
   actorUserId: string;
   ipAddress?: string | null;
 }) {
-  const name = params.name.trim();
-  if (!name) throw new Error("Month name is required");
-
-  const slug = slugifyMonth(name);
+  const parsed = parseMonthLabel(params.name, params.year);
+  const slug = slugifyMonth(parsed.displayName);
   const existing = await prisma.month.findUnique({ where: { slug } });
   if (existing) throw new Error("A month with this name already exists");
 
   const month = await prisma.month.create({
-    data: { name, slug }
+    data: {
+      name: parsed.displayName,
+      slug,
+      year: parsed.year
+    }
   });
 
-  await seedScheduleSlots(month.id);
+  await seedScheduleSlotsForMonth(month.id, month);
 
   await writeAuditLog({
     userId: params.actorUserId,
     action: "month.create",
     entityType: "month",
     entityId: month.id,
-    payload: { name, slug },
+    payload: { name: parsed.displayName, year: parsed.year, slug },
     ipAddress: params.ipAddress
   });
 

@@ -13,6 +13,7 @@ export async function patchScheduleSlot(
   data: Partial<{
     timeText: string | null;
     typeName: string | null;
+    actionDayDate: Date | null;
     dateBooked: Date | null;
     bookedBy: string | null;
     orgName: string | null;

@@ -11,12 +11,14 @@ export type ParsedScheduleSlot = {
   rowIndex: number;
   timeText: string | null;
   typeName: string | null;
+  actionDayDate: Date | null;
   dateBooked: Date | null;
   bookedBy: string | null;
   orgName: string | null;
 };
 
 export type DayColumns = {
+  blueCol: number;
   timeCol: number;
   typeCol: number;
   dateBookedCol: number;
@@ -51,6 +53,7 @@ export function parseScheduleDayBlocks(headerValues: string[]): DayColumns[] {
     };
 
     days.push({
+      blueCol,
       timeCol: typeCol - 1,
       typeCol,
       dateBookedCol: findCol(/^date booked$/) ?? typeCol + 1,
@@ -62,6 +65,7 @@ export function parseScheduleDayBlocks(headerValues: string[]): DayColumns[] {
   if (!days.length) {
     for (let tc = 2; tc < header.length; tc += SCHEDULE.COLS_PER_DAY) {
       days.push({
+        blueCol: tc - 2,
         timeCol: tc - 1,
         typeCol: tc,
         dateBookedCol: tc + 1,
@@ -167,6 +171,7 @@ export function parseScheduleCsv(content: string): ParsedScheduleSlot[] {
     const activeDays = days.length ? days : globalDays;
 
     activeDays.forEach((day, dayIndex) => {
+      const actionDayDate = parseDate(cell(grid, blockHeaderRow, day.blueCol));
       for (let ri = 0; ri < block.numRows; ri++) {
         const sheetRow = block.startRow + ri;
         const timeText = cell(grid, sheetRow, day.timeCol) || null;
@@ -182,6 +187,7 @@ export function parseScheduleCsv(content: string): ParsedScheduleSlot[] {
           rowIndex: ri,
           timeText,
           typeName,
+          actionDayDate,
           dateBooked,
           bookedBy,
           orgName: orgName || null

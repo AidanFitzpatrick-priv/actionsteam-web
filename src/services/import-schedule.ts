@@ -7,7 +7,8 @@ import path from "path";
 import { prisma } from "@/lib/db";
 import { parseScheduleCsv, type ParsedScheduleSlot } from "@/lib/schedule-csv-import";
 import { slugifyMonth } from "@/lib/names";
-import { SCHEDULE } from "@/lib/config";
+import { parseMonthLabel } from "@/lib/schedule-calendar";
+import { seedScheduleSlotsForMonth } from "@/services/schedule-calendar";
 import { syncScheduleSlotToTracker } from "@/services/schedule-sync";
 
 const DEFAULT_TYPE_COLORS = [
@@ -55,42 +56,37 @@ async function importReferenceDataIfPresent() {
   return { typesCount, gangsCount };
 }
 
-async function ensureMonth(name: string, setActive: boolean) {
-  const slug = slugifyMonth(name);
+async function ensureMonth(name: string, setActive: boolean, year?: number) {
+  const parsed = parseMonthLabel(name, year);
+  const slug = slugifyMonth(parsed.displayName);
   let month = await prisma.month.findUnique({ where: { slug } });
 
   if (!month) {
-    month = await prisma.month.create({ data: { name, slug, isActive: setActive } });
-  } else if (setActive) {
-    await prisma.month.updateMany({ data: { isActive: false } });
-    month = await prisma.month.update({ where: { id: month.id }, data: { isActive: true } });
+    month = await prisma.month.create({
+      data: { name: parsed.displayName, slug, year: parsed.year, isActive: setActive }
+    });
+    await seedScheduleSlotsForMonth(month.id, month);
+  } else {
+    if (!month.year) {
+      month = await prisma.month.update({
+        where: { id: month.id },
+        data: { year: parsed.year }
+      });
+    }
+    if (setActive) {
+      await prisma.month.updateMany({ data: { isActive: false } });
+      month = await prisma.month.update({ where: { id: month.id }, data: { isActive: true } });
+    }
+    await seedScheduleSlotsForMonth(month.id, month);
   }
 
   return month;
 }
 
 async function ensureSlotCapacity(monthId: string, slots: ParsedScheduleSlot[]) {
-  const maxWeek = Math.max(0, ...slots.map(s => s.weekIndex));
-  const neededWeeks = maxWeek + 1;
-
-  for (let w = 0; w < neededWeeks; w++) {
-    for (let d = 0; d < SCHEDULE.DAYS_PER_WEEK; d++) {
-      for (let r = 0; r < SCHEDULE.DATA_ROWS; r++) {
-        await prisma.scheduleSlot.upsert({
-          where: {
-            monthId_weekIndex_dayIndex_rowIndex: {
-              monthId,
-              weekIndex: w,
-              dayIndex: d,
-              rowIndex: r
-            }
-          },
-          create: { monthId, weekIndex: w, dayIndex: d, rowIndex: r },
-          update: {}
-        });
-      }
-    }
-  }
+  const month = await prisma.month.findUnique({ where: { id: monthId } });
+  if (!month) return;
+  await seedScheduleSlotsForMonth(monthId, month);
 }
 
 async function importSlots(monthId: string, slots: ParsedScheduleSlot[]) {
@@ -98,9 +94,6 @@ async function importSlots(monthId: string, slots: ParsedScheduleSlot[]) {
   let synced = 0;
 
   for (const s of slots) {
-    const hasData = s.typeName || s.orgName || s.bookedBy || s.dateBooked || s.timeText;
-    if (!hasData) continue;
-
     const slot = await prisma.scheduleSlot.findUnique({
       where: {
         monthId_weekIndex_dayIndex_rowIndex: {
@@ -113,18 +106,27 @@ async function importSlots(monthId: string, slots: ParsedScheduleSlot[]) {
     });
     if (!slot) continue;
 
+    const hasBooking =
+      s.typeName || s.orgName || s.bookedBy || s.dateBooked || s.timeText;
+
     const updatedSlot = await prisma.scheduleSlot.update({
       where: { id: slot.id },
       data: {
-        timeText: s.timeText,
-        typeName: s.typeName,
-        dateBooked: s.dateBooked,
-        bookedBy: s.bookedBy,
-        orgName: s.orgName,
-        deletedAt: null
+        ...(s.actionDayDate ? { actionDayDate: s.actionDayDate } : {}),
+        ...(hasBooking
+          ? {
+              timeText: s.timeText,
+              typeName: s.typeName,
+              dateBooked: s.dateBooked,
+              bookedBy: s.bookedBy,
+              orgName: s.orgName,
+              deletedAt: null
+            }
+          : {})
       }
     });
-    updated++;
+
+    if (hasBooking) updated++;
 
     if (updatedSlot.typeName && updatedSlot.orgName) {
       await syncScheduleSlotToTracker(updatedSlot.id);
@@ -171,7 +173,7 @@ export async function importBundledJuneSchedule() {
   }
   return runScheduleCsvImport({
     csvPath,
-    monthName: "June",
+    monthName: "June 2026",
     setActive: true,
     withReference: true
   });
