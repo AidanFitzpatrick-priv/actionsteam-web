@@ -206,7 +206,10 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
       </div>
 
       <div className="schedule-grid-wrap">
-        <table className="table schedule-grid">
+        <table
+          className="table schedule-grid"
+          style={{ ["--schedule-days" as string]: Math.max(currentWeekDays.length, 1) }}
+        >
           <thead>
             <tr>
               <th className="schedule-day-col">Day</th>
