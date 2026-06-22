@@ -325,8 +325,7 @@ h2 { font-size: 1.25rem; margin: 0 0 16px; }
 .tracker-col-type { width: 11rem; }
 .tracker-col-status { width: 10rem; }
 .tracker-col-org { width: 9rem; }
-.tracker-col-person { width: 8rem; }
-.tracker-col-attended { width: 9rem; }
+.tracker-col-attended { width: 10rem; }
 .tracker-col-winner { width: 8rem; }
 .tracker-col-count { width: 4.5rem; }
 .tracker-col-actions { width: 2.75rem; text-align: center; }
@@ -341,6 +340,18 @@ h2 { font-size: 1.25rem; margin: 0 0 16px; }
 }
 .tracker-field {
   margin-bottom: 0;
+}
+.tracker-multiselect {
+  min-height: 4.5rem;
+  height: 4.5rem;
+  padding: 4px 6px;
+}
+.tracker-multiselect option {
+  padding: 4px 6px;
+}
+.tracker-multiselect option:checked {
+  background: linear-gradient(var(--accent), var(--accent));
+  color: #fff;
 }
 .tracker-type-cell {
   border-left: 2px solid rgba(255, 255, 255, 0.06);

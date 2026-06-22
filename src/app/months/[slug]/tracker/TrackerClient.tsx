@@ -27,11 +27,55 @@ type Dropdowns = {
   statusOptions: string[];
 };
 
-function hostedByOptionsForRow(accountUsers: string[], current: string | null): string[] {
-  const trimmed = current?.trim();
-  if (!trimmed) return accountUsers;
-  if (accountUsers.some(u => u.toLowerCase() === trimmed.toLowerCase())) return accountUsers;
-  return [...accountUsers, trimmed];
+function attendedOptionsForRow(accountUsers: string[], attended: string[]): string[] {
+  const seen = new Map<string, string>();
+  for (const name of accountUsers) {
+    const trimmed = name.trim();
+    if (!trimmed) continue;
+    seen.set(trimmed.toLowerCase(), trimmed);
+  }
+  for (const name of attended) {
+    const trimmed = name.trim();
+    if (!trimmed) continue;
+    seen.set(trimmed.toLowerCase(), trimmed);
+  }
+  return Array.from(seen.values()).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+}
+
+function AttendedMultiSelect({
+  rowId,
+  attended,
+  accountUsers,
+  onPatch
+}: {
+  rowId: string;
+  attended: string[];
+  accountUsers: string[];
+  onPatch: (id: string, patch: Record<string, unknown>) => void;
+}) {
+  const options = attendedOptionsForRow(accountUsers, attended);
+
+  return (
+    <select
+      multiple
+      className="select-compact tracker-field tracker-multiselect"
+      aria-label="Attended"
+      title="Ctrl+click to select multiple"
+      value={attended}
+      onChange={e => {
+        const selected = Array.from(e.target.selectedOptions).map(o => o.value);
+        onPatch(rowId, { attended: selected });
+      }}
+    >
+      {options.map(name => (
+        <option key={name} value={name}>
+          {name}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 function rowHasData(row: Row): boolean {
@@ -40,7 +84,6 @@ function rowHasData(row: Row): boolean {
       row.typeName?.trim() ||
       row.org1Name?.trim() ||
       row.org2Name?.trim() ||
-      row.hostedBy?.trim() ||
       row.status.length ||
       row.attended.length ||
       row.actionWinner?.trim()
@@ -139,7 +182,7 @@ export function TrackerClient({
         </h1>
         <p className="muted">
           Add rows manually and fill in each action. Winner = ORG 1, ORG 2, or N/A (N/A sets
-          headcounts to N/A).
+          headcounts to N/A). Attended: Ctrl+click (⌘+click on Mac) to pick multiple names.
         </p>
         {toast && <p className="success">{toast}</p>}
       </div>
@@ -165,7 +208,6 @@ export function TrackerClient({
               <th className="tracker-col-status">Status</th>
               <th className="tracker-col-org">ORG 1</th>
               <th className="tracker-col-org">ORG 2</th>
-              <th className="tracker-col-person">Hosted by</th>
               <th className="tracker-col-attended">Attended</th>
               <th className="tracker-col-winner">Winner</th>
               <th className="tracker-col-count">ORG 1 #</th>
@@ -176,14 +218,13 @@ export function TrackerClient({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={11} className="tracker-empty-hint muted">
+                <td colSpan={10} className="tracker-empty-hint muted">
                   No rows yet — press Add row to log an action.
                 </td>
               </tr>
             ) : (
               rows.map(row => {
                 const filled = rowHasData(row);
-                const hostedOptions = hostedByOptionsForRow(dropdowns.accountUsers, row.hostedBy);
 
                 return (
                   <tr key={row.id} className={filled ? "is-filled" : "is-empty"}>
@@ -263,35 +304,12 @@ export function TrackerClient({
                         ))}
                       </select>
                     </td>
-                    <td className="tracker-col-person">
-                      <select
-                        className="select-compact tracker-field"
-                        value={row.hostedBy ?? ""}
-                        aria-label="Hosted by"
-                        onChange={e => updateRow(row.id, { hostedBy: e.target.value || null })}
-                      >
-                        <option value="">—</option>
-                        {hostedOptions.map(name => (
-                          <option key={name} value={name}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
                     <td className="tracker-col-attended">
-                      <input
-                        className="input-compact tracker-field"
-                        aria-label="Attended"
-                        placeholder="Names"
-                        defaultValue={row.attended.join(", ")}
-                        onBlur={e =>
-                          updateRow(row.id, {
-                            attended: e.target.value
-                              .split(",")
-                              .map(s => s.trim())
-                              .filter(Boolean)
-                          })
-                        }
+                      <AttendedMultiSelect
+                        rowId={row.id}
+                        attended={row.attended}
+                        accountUsers={dropdowns.accountUsers}
+                        onPatch={updateRow}
                       />
                     </td>
                     <td className="tracker-col-winner">
