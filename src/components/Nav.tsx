@@ -4,7 +4,12 @@ import { canCreateInvites, isFullAdmin, formatRole } from "@/lib/rbac";
 import { LogoutButton } from "@/components/LogoutButton";
 
 export async function Nav() {
-  const user = await getCurrentUser();
+  let user = null;
+  try {
+    user = await getCurrentUser();
+  } catch {
+    // DB may still be syncing on cold start — render logged-out nav
+  }
 
   return (
     <header className="nav">

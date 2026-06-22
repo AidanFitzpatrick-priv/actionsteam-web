@@ -65,7 +65,8 @@ For production, extend `scripts/nightly-backup.ts` to upload to S3/R2.
 | Issue | Fix |
 |-------|-----|
 | Build fails (Node 18 / EBUSY) | Repo includes `.node-version` (20) and `nixpacks.toml`; redeploy after pulling latest |
-| Pre-deploy / prisma failed | Fixed: schema runs at **start** now. Ensure `DATABASE_URL` is referenced on the **web** service |
+| Healthcheck failure | Fixed: `/api/health` (no DB). Next starts before schema sync. |
+| Pre-deploy / prisma failed | Schema runs in background at start; check deploy logs for `Schema applied` |
 | `DATABASE_URL is not set` | Web service → Variables → Add Reference → Postgres → `DATABASE_URL` |
 | 502 on start | Check **Deploy logs** (not build); confirm Postgres is linked |
 | Invite links show localhost | Set `APP_URL` to your public URL |
