@@ -24,9 +24,17 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
     const rows = await getTrackerRows(month.id);
     const { getDropdownOptions } = await import("@/services/reference-data");
-    const dropdowns = await getDropdownOptions();
+    const { getTypeColorMap, colorForType } = await import("@/services/schedule");
+    const [dropdowns, colorMap] = await Promise.all([getDropdownOptions(), getTypeColorMap()]);
 
-    return jsonOk({ month, rows, dropdowns });
+    return jsonOk({
+      month,
+      rows: rows.map(r => ({
+        ...r,
+        colour: colorForType(r.typeName, colorMap)
+      })),
+      dropdowns
+    });
   } catch (e) {
     return jsonError(e);
   }
@@ -83,6 +91,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       org2Attended: body.org2Attended
     });
 
+    const { getTypeColorMap, colorForType } = await import("@/services/schedule");
+    const colorMap = await getTypeColorMap();
+
     let toast: string | undefined;
     if (body.actionWinner?.trim().toLowerCase() === "n/a") {
       toast = "Headcount set to N/A";
@@ -99,7 +110,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const statsRows = await loadStatsForMonth(month.id);
     const stats = buildAllStatsTables(statsRows, statsRows);
 
-    return jsonOk({ row, toast, stats });
+    return jsonOk({ row: { ...row, colour: colorForType(row.typeName, colorMap) }, toast, stats });
   } catch (e) {
     return jsonError(e);
   }

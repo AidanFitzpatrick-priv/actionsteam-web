@@ -9,7 +9,6 @@ import { parseScheduleCsv, type ParsedScheduleSlot } from "@/lib/schedule-csv-im
 import { slugifyMonth } from "@/lib/names";
 import { parseMonthLabel } from "@/lib/schedule-calendar";
 import { seedScheduleSlotsForMonth } from "@/services/schedule-calendar";
-import { syncScheduleSlotToTracker } from "@/services/schedule-sync";
 
 const DEFAULT_TYPE_COLORS = [
   "#fce5cd", "#d9ead3", "#cfe2f3", "#f4cccc", "#fff2cc", "#d9d2e9", "#ead1dc", "#c9daf8"
@@ -91,7 +90,6 @@ async function ensureSlotCapacity(monthId: string, slots: ParsedScheduleSlot[]) 
 
 async function importSlots(monthId: string, slots: ParsedScheduleSlot[]) {
   let updated = 0;
-  let synced = 0;
 
   for (const s of slots) {
     const slot = await prisma.scheduleSlot.findUnique({
@@ -109,7 +107,7 @@ async function importSlots(monthId: string, slots: ParsedScheduleSlot[]) {
     const hasBooking =
       s.typeName || s.orgName || s.bookedBy || s.dateBooked || s.timeText;
 
-    const updatedSlot = await prisma.scheduleSlot.update({
+    await prisma.scheduleSlot.update({
       where: { id: slot.id },
       data: {
         ...(s.actionDayDate ? { actionDayDate: s.actionDayDate } : {}),
@@ -127,14 +125,9 @@ async function importSlots(monthId: string, slots: ParsedScheduleSlot[]) {
     });
 
     if (hasBooking) updated++;
-
-    if (updatedSlot.typeName && updatedSlot.orgName) {
-      await syncScheduleSlotToTracker(updatedSlot.id);
-      synced++;
-    }
   }
 
-  return { updated, synced };
+  return { updated, synced: 0 };
 }
 
 export async function runScheduleCsvImport(options: {

@@ -2,8 +2,6 @@ import { NextRequest } from "next/server";
 import { jsonError, jsonOk, requireRole, getMeta } from "@/lib/api";
 import { writeAuditLog } from "@/lib/audit";
 import { recalculateAllPoints } from "@/services/points";
-import { importScheduleToTracker } from "@/services/schedule-sync";
-import { prisma } from "@/lib/db";
 import { importBundledJuneSchedule } from "@/services/import-schedule";
 import { z } from "zod";
 
@@ -12,8 +10,7 @@ export async function POST(req: NextRequest) {
     const user = await requireRole("aux");
     const body = z
       .object({
-        action: z.enum(["recalculate", "import_schedule", "import_june_sheet"]),
-        monthId: z.string().optional()
+        action: z.enum(["recalculate", "import_june_sheet"])
       })
       .parse(await req.json());
     const meta = getMeta(req);
@@ -25,38 +22,19 @@ export async function POST(req: NextRequest) {
         action: "admin.import_june_sheet",
         entityType: "month",
         entityId: result.month.id,
-        payload: { updated: result.updated, synced: result.synced },
+        payload: { updated: result.updated },
         ipAddress: meta.ipAddress
       });
       return jsonOk({ ok: true, result });
     }
 
-    if (body.action === "recalculate") {
-      const result = await recalculateAllPoints();
-      await writeAuditLog({
-        userId: user.id,
-        action: "admin.recalculate",
-        ipAddress: meta.ipAddress
-      });
-      return jsonOk({ ok: true, result });
-    }
-
-    const month = body.monthId
-      ? await prisma.month.findUnique({ where: { id: body.monthId } })
-      : await prisma.month.findFirst({ where: { isActive: true, archivedAt: null } });
-
-    if (!month) return jsonOk({ ok: false, error: "No month found" });
-
-    await importScheduleToTracker(month.id);
+    const result = await recalculateAllPoints();
     await writeAuditLog({
       userId: user.id,
-      action: "admin.import_schedule",
-      entityType: "month",
-      entityId: month.id,
+      action: "admin.recalculate",
       ipAddress: meta.ipAddress
     });
-
-    return jsonOk({ ok: true, monthId: month.id });
+    return jsonOk({ ok: true, result });
   } catch (e) {
     return jsonError(e);
   }

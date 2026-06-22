@@ -71,8 +71,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const colorMap = await getTypeColorMap();
     return jsonOk({
-      slot: { ...slot, colour: colorForType(slot.typeName, colorMap) },
-      message: slot.typeName && slot.orgName ? "Added to tracker" : undefined
+      slot: { ...slot, colour: colorForType(slot.typeName, colorMap) }
     });
   } catch (e) {
     return jsonError(e);

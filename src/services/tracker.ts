@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
 import { applyWinnerSideEffects } from "@/services/points";
-import { syncScheduleSlotToTracker } from "@/services/schedule-sync";
 import type { StatsRow } from "@/services/stats";
 
 export async function getTrackerRows(monthId: string) {
@@ -51,14 +50,10 @@ export async function addTrackerRow(monthId: string) {
 }
 
 export async function softDeleteTrackerRow(rowId: string) {
-  const row = await prisma.trackerRow.update({
+  return prisma.trackerRow.update({
     where: { id: rowId },
     data: { deletedAt: new Date(), scheduleSlotId: null }
   });
-  if (row.scheduleSlotId) {
-    await syncScheduleSlotToTracker(row.scheduleSlotId).catch(() => {});
-  }
-  return row;
 }
 
 export async function loadStatsRows(useAllMonths = false): Promise<StatsRow[]> {

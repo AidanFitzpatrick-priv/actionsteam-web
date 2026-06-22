@@ -206,8 +206,7 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
           {calendar.monthName} {calendar.year} — Actions Schedule
         </h1>
         <p className="muted">
-          Week {week + 1}. Action dates on the left; times in column headers. Type + ORG syncs to
-          tracker.
+          Week {week + 1}. Action dates on the left; times in column headers.
         </p>
         {toast && <p className="success">{toast}</p>}
       </div>

@@ -13,8 +13,8 @@ export default async function TrackerPage({ params }: Props) {
   if (!month || month.archivedAt) notFound();
 
   return (
-    <div className="container-wide">
-      <TrackerClient slug={slug} monthName={month.name} />
+    <div className="container-schedule schedule-layout">
+      <TrackerClient slug={slug} monthName={month.name} monthYear={month.year} />
     </div>
   );
 }

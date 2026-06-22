@@ -170,7 +170,6 @@ export async function applyScheduleSlotUpdate(slotId: string, update: SlotUpdate
     where: { id: slotId },
     data
   });
-  await syncScheduleSlotToTracker(slot.id);
   return slot;
 }
 

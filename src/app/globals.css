@@ -252,3 +252,112 @@ h2 { font-size: 1.25rem; margin: 0 0 16px; }
   font-size: 14px;
   min-width: 3.25rem;
 }
+
+.tracker-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.tracker-page-header h1 {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+.tracker-page-header .muted {
+  font-size: 13px;
+}
+.tracker-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+.tracker-add-btn {
+  padding: 10px 18px;
+  font-size: 14px;
+}
+.tracker-row-count {
+  font-size: 13px;
+}
+.tracker-grid-wrap {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+.tracker-grid {
+  width: 100%;
+  table-layout: fixed;
+  font-size: 14px;
+}
+.tracker-grid th,
+.tracker-grid td {
+  padding: 8px 6px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+}
+.tracker-grid thead th {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 10px 6px;
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+.tracker-grid tbody tr {
+  min-height: calc((100vh - 13rem) / var(--tracker-rows, 12));
+}
+.tracker-grid tbody tr.is-empty {
+  background: var(--bg);
+}
+.tracker-grid tbody tr.is-filled:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+.tracker-col-date { width: 6.5rem; }
+.tracker-col-type { width: 11rem; }
+.tracker-col-status { width: 10rem; }
+.tracker-col-org { width: 9rem; }
+.tracker-col-person { width: 8rem; }
+.tracker-col-attended { width: 9rem; }
+.tracker-col-winner { width: 8rem; }
+.tracker-col-count { width: 4.5rem; }
+.tracker-col-actions { width: 2.75rem; text-align: center; }
+.tracker-grid .input-compact,
+.tracker-grid .select-compact {
+  font-size: 13px;
+  padding: 8px 10px;
+  line-height: 1.35;
+  border-radius: 6px;
+  width: 100%;
+  min-width: 0;
+}
+.tracker-field {
+  margin-bottom: 0;
+}
+.tracker-type-cell {
+  border-left: 2px solid rgba(255, 255, 255, 0.06);
+}
+.tracker-delete-btn {
+  padding: 4px 10px;
+  font-size: 16px;
+  line-height: 1;
+  min-width: 0;
+}
+.tracker-empty-hint {
+  text-align: center;
+  padding: 2rem 1rem !important;
+  font-size: 14px;
+}
+main:has(.tracker-page) {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 49px);
+}
