@@ -10,11 +10,14 @@ This folder is its own git repository (`actionsteam-web`). Push it to GitHub (se
 2. Select **`actionsteam-web`** (or your fork)
 3. Railway detects Next.js via `railway.toml`
 
-## 3. Add PostgreSQL
+## 3. Add PostgreSQL (required)
 
 1. In the project → **+ New** → **Database** → **PostgreSQL**
-2. Open your **web service** → **Variables** → **Add Reference**
-3. Reference `DATABASE_URL` from the Postgres service
+2. Click your **web service** (actionsteam-web), not the database
+3. **Variables** tab → **+ New Variable** → **Add Reference**
+4. Select the **Postgres** service → pick **`DATABASE_URL`** → Add
+
+Without this, deploy fails with `DATABASE_URL is not set` or pre-deploy errors.
 
 ## 4. Environment variables
 
@@ -62,6 +65,8 @@ For production, extend `scripts/nightly-backup.ts` to upload to S3/R2.
 | Issue | Fix |
 |-------|-----|
 | Build fails (Node 18 / EBUSY) | Repo includes `.node-version` (20) and `nixpacks.toml`; redeploy after pulling latest |
-| 502 on start | Check deploy logs; confirm Postgres is linked |
+| Pre-deploy / prisma failed | Fixed: schema runs at **start** now. Ensure `DATABASE_URL` is referenced on the **web** service |
+| `DATABASE_URL is not set` | Web service → Variables → Add Reference → Postgres → `DATABASE_URL` |
+| 502 on start | Check **Deploy logs** (not build); confirm Postgres is linked |
 | Invite links show localhost | Set `APP_URL` to your public URL |
 | CSRF errors | `APP_URL` must match the browser origin (include `https://`) |
