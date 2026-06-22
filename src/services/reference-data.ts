@@ -190,7 +190,6 @@ export async function getDropdownOptions() {
     types: types.map(t => ({ name: t.name, colourHex: t.colourHex })),
     org1: org1Names,
     org2: org2Names,
-    winners: [...org1Names, ...org2Names, "N/A"],
     statusOptions: [
       "Completed",
       "Actions Didn't Attend",

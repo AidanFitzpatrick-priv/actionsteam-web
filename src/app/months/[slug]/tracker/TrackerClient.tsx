@@ -23,9 +23,58 @@ type Dropdowns = {
   types: { name: string; colourHex: string }[];
   org1: string[];
   org2: string[];
-  winners: string[];
   statusOptions: string[];
 };
+
+/** Port of TrackerDropdowns.js buildActionWinnerOptions_ */
+function buildActionWinnerOptions(
+  org1: string | null,
+  org2: string | null,
+  currentWinner?: string | null
+): string[] {
+  const options: string[] = [];
+  const seen = new Set<string>();
+  const add = (value: string | null | undefined) => {
+    const trimmed = value?.trim();
+    if (!trimmed) return;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    options.push(trimmed);
+  };
+  add(org1);
+  add(org2);
+  add("N/A");
+  if (currentWinner?.trim() && !seen.has(currentWinner.trim().toLowerCase())) {
+    options.push(currentWinner.trim());
+  }
+  return options;
+}
+
+function winnerOptionsForRow(row: Row): string[] {
+  return buildActionWinnerOptions(row.org1Name, row.org2Name, row.actionWinner);
+}
+
+function canPickWinner(row: Row): boolean {
+  return Boolean(row.org1Name?.trim() && row.org2Name?.trim());
+}
+
+function patchRowWithWinnerCheck(
+  row: Row,
+  patch: Record<string, unknown>,
+  onPatch: (id: string, patch: Record<string, unknown>) => void
+) {
+  const org1 = "org1Name" in patch ? (patch.org1Name as string | null) : row.org1Name;
+  const org2 = "org2Name" in patch ? (patch.org2Name as string | null) : row.org2Name;
+  const next: Record<string, unknown> = { ...patch };
+  if (row.actionWinner) {
+    const stillValid = buildActionWinnerOptions(org1, org2, row.actionWinner).some(
+      o => o.toLowerCase() === row.actionWinner!.trim().toLowerCase()
+    );
+    if (!stillValid) next.actionWinner = null;
+  }
+  onPatch(row.id, next);
+}
 
 function attendedOptionsForRow(accountUsers: string[], attended: string[]): string[] {
   const seen = new Map<string, string>();
@@ -356,7 +405,13 @@ export function TrackerClient({
                         className="select-compact tracker-field"
                         value={row.org1Name ?? ""}
                         aria-label="ORG 1"
-                        onChange={e => updateRow(row.id, { org1Name: e.target.value || null })}
+                        onChange={e =>
+                          patchRowWithWinnerCheck(
+                            row,
+                            { org1Name: e.target.value || null },
+                            updateRow
+                          )
+                        }
                       >
                         <option value="">—</option>
                         {dropdowns.org1.map(o => (
@@ -371,7 +426,13 @@ export function TrackerClient({
                         className="select-compact tracker-field"
                         value={row.org2Name ?? ""}
                         aria-label="ORG 2"
-                        onChange={e => updateRow(row.id, { org2Name: e.target.value || null })}
+                        onChange={e =>
+                          patchRowWithWinnerCheck(
+                            row,
+                            { org2Name: e.target.value || null },
+                            updateRow
+                          )
+                        }
                       >
                         <option value="">—</option>
                         {dropdowns.org2.map(o => (
@@ -394,10 +455,11 @@ export function TrackerClient({
                         className="select-compact tracker-field"
                         value={row.actionWinner ?? ""}
                         aria-label="Winner"
+                        disabled={!canPickWinner(row) && !row.actionWinner?.trim()}
                         onChange={e => updateRow(row.id, { actionWinner: e.target.value || null })}
                       >
                         <option value="">—</option>
-                        {dropdowns.winners.map(w => (
+                        {winnerOptionsForRow(row).map(w => (
                           <option key={w} value={w}>
                             {w}
                           </option>
