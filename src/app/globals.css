@@ -103,3 +103,18 @@ h2 { font-size: 1.25rem; margin: 0 0 16px; }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.schedule-grid .schedule-day-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  min-width: 100px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.schedule-grid .schedule-time-col {
+  font-size: 13px;
+  text-align: center;
+  min-width: 72px;
+}

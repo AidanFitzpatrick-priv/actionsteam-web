@@ -24,6 +24,64 @@ type Dropdowns = {
   staff: string[];
 };
 
+function ScheduleSlotCell({
+  slot,
+  dropdowns,
+  onPatch
+}: {
+  slot: Slot;
+  dropdowns: Dropdowns;
+  onPatch: (id: string, patch: Record<string, unknown>) => void;
+}) {
+  return (
+    <td style={{ background: slot.colour, verticalAlign: "top", minWidth: 128, padding: 8 }}>
+      <input
+        className="input"
+        placeholder="Time"
+        defaultValue={slot.timeText ?? ""}
+        style={{ marginBottom: 4, fontSize: 13 }}
+        onBlur={e => onPatch(slot.id, { timeText: e.target.value || null })}
+      />
+      <select
+        className="select"
+        value={slot.typeName ?? ""}
+        style={{ marginBottom: 4, fontSize: 13 }}
+        onChange={e => onPatch(slot.id, { typeName: e.target.value || null })}
+      >
+        <option value="">Type</option>
+        {dropdowns.types.map(t => (
+          <option key={t.name} value={t.name}>{t.name}</option>
+        ))}
+      </select>
+      <input
+        className="input"
+        placeholder="DD/MM/YYYY"
+        defaultValue={slot.dateBooked ? formatDateUK(new Date(slot.dateBooked)) : ""}
+        style={{ marginBottom: 4, fontSize: 13 }}
+        onBlur={e => onPatch(slot.id, { dateBooked: e.target.value || null })}
+      />
+      <input
+        className="input"
+        placeholder="Booked by"
+        defaultValue={slot.bookedBy ?? ""}
+        style={{ marginBottom: 4, fontSize: 13 }}
+        onBlur={e => onPatch(slot.id, { bookedBy: e.target.value || null })}
+      />
+      <select
+        className="select"
+        value={slot.orgName ?? ""}
+        style={{ fontSize: 13 }}
+        onChange={e => onPatch(slot.id, { orgName: e.target.value || null })}
+      >
+        <option value="">ORG</option>
+        {dropdowns.org2.map(o => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+    </td>
+  );
+}
+
 export function ScheduleClient({ slug, monthName }: { slug: string; monthName: string }) {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [dropdowns, setDropdowns] = useState<Dropdowns | null>(null);
@@ -41,11 +99,11 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
 
   useEffect(() => { load(); }, [load]);
 
-  async function patch(slotId: string, patch: Record<string, unknown>) {
+  async function patch(slotId: string, patchData: Record<string, unknown>) {
     const res = await fetch(`/api/months/${slug}/schedule`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slotId, ...patch })
+      body: JSON.stringify({ slotId, ...patchData })
     });
     const data = await res.json();
     if (res.ok) {
@@ -62,15 +120,20 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
     weekSlots.filter(s => s.dayIndex === dayIndex).sort((a, b) => a.rowIndex - b.rowIndex)
   );
 
+  const timeColumnLabels = Array.from({ length: 12 }, (_, rowIdx) => {
+    const withTime = weekSlots.find(s => s.rowIndex === rowIdx && s.timeText?.trim());
+    return withTime?.timeText?.trim() ?? "";
+  });
+
   if (!dropdowns) return <p className="muted">Loading schedule…</p>;
 
   return (
     <div>
       <h1>{monthName} — Actions Schedule</h1>
-      <p className="muted">Type + ORG syncs to tracker. Colours from action types.</p>
+      <p className="muted">Days down the side, times across the top. Type + ORG syncs to tracker.</p>
       {toast && <p className="success">{toast}</p>}
 
-      <div style={{ margin: "16px 0", display: "flex", gap: 8 }}>
+      <div style={{ margin: "16px 0", display: "flex", gap: 8, flexWrap: "wrap" }}>
         {[0, 1, 2, 3, 4].map(w => (
           <button key={w} type="button" className={w === week ? "btn" : "btn btn-secondary"} onClick={() => setWeek(w)}>
             Week {w + 1}
@@ -79,41 +142,38 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
       </div>
 
       <div style={{ overflowX: "auto" }}>
-        <table className="table">
+        <table className="table schedule-grid">
           <thead>
             <tr>
-              {DAY_NAMES.map(d => <th key={d}>{d}</th>)}
+              <th className="schedule-day-col">Day</th>
+              {timeColumnLabels.map((label, rowIdx) => (
+                <th key={rowIdx} className="schedule-time-col">
+                  {label || `#${rowIdx + 1}`}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {Array.from({ length: 12 }).map((_, rowIdx) => (
-              <tr key={rowIdx}>
-                {byDay.map((daySlots, dayIndex) => {
-                  const slot = daySlots.find(s => s.rowIndex === rowIdx);
-                  if (!slot) return <td key={dayIndex} />;
-                  return (
-                    <td key={dayIndex} style={{ background: slot.colour, verticalAlign: "top", minWidth: 140 }}>
-                      <input className="input" placeholder="Time" defaultValue={slot.timeText ?? ""} style={{ marginBottom: 4 }}
-                        onBlur={e => patch(slot.id, { timeText: e.target.value || null })} />
-                      <select className="select" value={slot.typeName ?? ""} style={{ marginBottom: 4 }}
-                        onChange={e => patch(slot.id, { typeName: e.target.value || null })}>
-                        <option value="">Type</option>
-                        {dropdowns.types.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
-                      </select>
-                      <input className="input" placeholder="DD/MM/YYYY" defaultValue={slot.dateBooked ? formatDateUK(new Date(slot.dateBooked)) : ""} style={{ marginBottom: 4 }}
-                        onBlur={e => patch(slot.id, { dateBooked: e.target.value || null })} />
-                      <input className="input" placeholder="Booked by" defaultValue={slot.bookedBy ?? ""} style={{ marginBottom: 4 }}
-                        onBlur={e => patch(slot.id, { bookedBy: e.target.value || null })} />
-                      <select className="select" value={slot.orgName ?? ""}
-                        onChange={e => patch(slot.id, { orgName: e.target.value || null })}>
-                        <option value="">ORG</option>
-                        {dropdowns.org2.map(o => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+            {DAY_NAMES.map((dayName, dayIndex) => {
+              const daySlots = byDay[dayIndex];
+              return (
+                <tr key={dayName}>
+                  <th scope="row" className="schedule-day-col">{dayName}</th>
+                  {Array.from({ length: 12 }).map((_, rowIdx) => {
+                    const slot = daySlots.find(s => s.rowIndex === rowIdx);
+                    if (!slot) return <td key={rowIdx} />;
+                    return (
+                      <ScheduleSlotCell
+                        key={slot.id}
+                        slot={slot}
+                        dropdowns={dropdowns}
+                        onPatch={patch}
+                      />
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
