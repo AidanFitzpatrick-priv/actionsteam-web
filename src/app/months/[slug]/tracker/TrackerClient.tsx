@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateUKShort } from "@/lib/dates";
 
 type Row = {
@@ -44,7 +44,7 @@ function attendedOptionsForRow(accountUsers: string[], attended: string[]): stri
   );
 }
 
-function AttendedMultiSelect({
+function AttendedCheckboxDropdown({
   rowId,
   attended,
   accountUsers,
@@ -55,26 +55,103 @@ function AttendedMultiSelect({
   accountUsers: string[];
   onPatch: (id: string, patch: Record<string, unknown>) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const options = attendedOptionsForRow(accountUsers, attended);
 
+  const selectedKeys = useMemo(
+    () => new Set(attended.map(name => name.toLowerCase())),
+    [attended]
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const menuMaxHeight = 220;
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const openUp = spaceBelow < 140 && rect.top > spaceBelow;
+
+    setMenuStyle({
+      position: "fixed",
+      left: rect.left,
+      width: Math.max(rect.width, 160),
+      zIndex: 1000,
+      ...(openUp
+        ? { bottom: window.innerHeight - rect.top + 4, maxHeight: Math.min(menuMaxHeight, rect.top - 8) }
+        : { top: rect.bottom + 4, maxHeight: Math.min(menuMaxHeight, spaceBelow) })
+    });
+  }, [open]);
+
+  const summary =
+    attended.length === 0
+      ? "—"
+      : attended.length <= 2
+        ? attended.join(", ")
+        : `${attended.length} selected`;
+
+  function toggle(name: string) {
+    const key = name.toLowerCase();
+    const next = selectedKeys.has(key)
+      ? attended.filter(n => n.toLowerCase() !== key)
+      : [...attended, name];
+    onPatch(rowId, { attended: next });
+  }
+
   return (
-    <select
-      multiple
-      className="select-compact tracker-field tracker-multiselect"
-      aria-label="Attended"
-      title="Ctrl+click to select multiple"
-      value={attended}
-      onChange={e => {
-        const selected = Array.from(e.target.selectedOptions).map(o => o.value);
-        onPatch(rowId, { attended: selected });
-      }}
-    >
-      {options.map(name => (
-        <option key={name} value={name}>
-          {name}
-        </option>
-      ))}
-    </select>
+    <div className="attended-dropdown" ref={rootRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="attended-dropdown-trigger"
+        aria-label="Attended"
+        aria-expanded={open}
+        onClick={() => setOpen(v => !v)}
+      >
+        <span className={`attended-dropdown-label${attended.length ? "" : " is-empty"}`}>
+          {summary}
+        </span>
+        <span className="attended-dropdown-chevron" aria-hidden>
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="attended-dropdown-menu" style={menuStyle} role="listbox" aria-multiselectable>
+          {options.length === 0 ? (
+            <p className="attended-dropdown-empty muted">No accounts yet</p>
+          ) : (
+            options.map(name => {
+              const checked = selectedKeys.has(name.toLowerCase());
+              return (
+                <label key={name} className="attended-dropdown-option">
+                  <input type="checkbox" checked={checked} onChange={() => toggle(name)} />
+                  <span>{name}</span>
+                </label>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -182,7 +259,7 @@ export function TrackerClient({
         </h1>
         <p className="muted">
           Add rows manually and fill in each action. Winner = ORG 1, ORG 2, or N/A (N/A sets
-          headcounts to N/A). Attended: Ctrl+click (⌘+click on Mac) to pick multiple names.
+          headcounts to N/A).
         </p>
         {toast && <p className="success">{toast}</p>}
       </div>
@@ -305,7 +382,7 @@ export function TrackerClient({
                       </select>
                     </td>
                     <td className="tracker-col-attended">
-                      <AttendedMultiSelect
+                      <AttendedCheckboxDropdown
                         rowId={row.id}
                         attended={row.attended}
                         accountUsers={dropdowns.accountUsers}
