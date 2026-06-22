@@ -3,6 +3,7 @@ import {
   allowedRoleOptionsForActor,
   canAssignRole,
   canEditUserRole,
+  canEditUsername,
   canHardDeleteMonth,
   canViewBackups,
   canViewGoalScoreRow
@@ -52,6 +53,19 @@ describe("canAssignRole", () => {
   it("allows assigning below actor", () => {
     expect(canAssignRole("aux", "member")).toBe(true);
     expect(canAssignRole("management", "adm")).toBe(true);
+  });
+});
+
+describe("canEditUsername", () => {
+  it("allows aux and above", () => {
+    expect(canEditUsername("aux")).toBe(true);
+    expect(canEditUsername("adm")).toBe(true);
+    expect(canEditUsername("management")).toBe(true);
+  });
+
+  it("denies below aux", () => {
+    expect(canEditUsername("lead")).toBe(false);
+    expect(canEditUsername("member")).toBe(false);
   });
 });
 

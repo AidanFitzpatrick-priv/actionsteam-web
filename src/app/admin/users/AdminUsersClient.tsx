@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { UserRole } from "@prisma/client";
-import { allowedRoleOptionsForActor, canEditUserRole, formatRole } from "@/lib/rbac";
+import { allowedRoleOptionsForActor, canEditUserRole, canEditUsername, formatRole } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type UserRow = {
@@ -17,15 +17,24 @@ type UserRow = {
 
 export function AdminUsersClient({ viewerRole }: { viewerRole: UserRole }) {
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [usernameDraft, setUsernameDraft] = useState<Record<string, string>>({});
   const [cityDraft, setCityDraft] = useState<Record<string, string>>({});
   const [discordDraft, setDiscordDraft] = useState<Record<string, string>>({});
   const assignableRoles = allowedRoleOptionsForActor(viewerRole);
+  const canEditNames = canEditUsername(viewerRole);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/users");
     const data = await res.json();
     if (res.ok) {
       setUsers(data.users);
+      setUsernameDraft(prev => {
+        const next = { ...prev };
+        for (const u of data.users as UserRow[]) {
+          if (next[u.id] === undefined) next[u.id] = u.username;
+        }
+        return next;
+      });
       setCityDraft(prev => {
         const next = { ...prev };
         for (const u of data.users as UserRow[]) {
@@ -54,7 +63,7 @@ export function AdminUsersClient({ viewerRole }: { viewerRole: UserRole }) {
 
   async function patch(
     userId: string,
-    patch: { role?: UserRole; disabled?: boolean; cityId?: string | null; discordId?: string | null }
+    patch: { role?: UserRole; disabled?: boolean; username?: string; cityId?: string | null; discordId?: string | null }
   ) {
     const res = await fetch("/api/admin/users", {
       method: "PATCH",
@@ -66,6 +75,12 @@ export function AdminUsersClient({ viewerRole }: { viewerRole: UserRole }) {
       alert(data.error ?? "Update failed");
     }
     await load();
+  }
+
+  async function saveUsername(userId: string) {
+    const raw = usernameDraft[userId]?.trim();
+    if (!raw) return;
+    await patch(userId, { username: raw });
   }
 
   async function saveCityId(userId: string) {
@@ -103,7 +118,20 @@ export function AdminUsersClient({ viewerRole }: { viewerRole: UserRole }) {
 
             return (
               <tr key={u.id}>
-                <td>{u.username}</td>
+                <td>
+                  {canEditNames ? (
+                    <input
+                      className="input"
+                      style={{ maxWidth: 140, padding: "4px 8px", fontSize: 13 }}
+                      value={usernameDraft[u.id] ?? ""}
+                      placeholder="Username"
+                      onChange={e => setUsernameDraft(d => ({ ...d, [u.id]: e.target.value }))}
+                      onBlur={() => saveUsername(u.id)}
+                    />
+                  ) : (
+                    u.username
+                  )}
+                </td>
                 <td>{u.email}</td>
                 <td>
                   <input

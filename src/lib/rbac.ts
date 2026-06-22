@@ -64,6 +64,11 @@ export function canViewBackups(role: UserRole): boolean {
   return role === "adm" || role === "management";
 }
 
+/** Admin → Users: aux+ may edit usernames. */
+export function canEditUsername(role: UserRole): boolean {
+  return hasMinRole(role, "aux");
+}
+
 /** Goal scores: own row + everyone strictly below viewer rank; adm/management see all. */
 export function canViewGoalScoreRow(
   viewerRole: UserRole,

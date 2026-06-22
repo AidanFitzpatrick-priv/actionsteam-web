@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+export const usernameSchema = z
+  .string()
+  .trim()
+  .min(3, "Username must be at least 3 characters")
+  .max(32, "Username is too long")
+  .regex(/^[a-zA-Z0-9_\-]+$/, "Username may only contain letters, numbers, _ and -");
+
 export const cityIdSchema = z
   .string()
   .trim()

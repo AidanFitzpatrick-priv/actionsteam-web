@@ -4,12 +4,12 @@ import { jsonError, jsonOk, getMeta, ApiError } from "@/lib/api";
 import { signupWithInvite } from "@/services/auth";
 import { createSession, sessionCookieOptions, SESSION_COOKIE, REFRESH_COOKIE } from "@/lib/session";
 
-import { cityIdSchema } from "@/lib/user-fields";
+import { cityIdSchema, usernameSchema } from "@/lib/user-fields";
 
 const schema = z.object({
   inviteToken: z.string().min(10),
   email: z.string().email(),
-  username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_\-]+$/),
+  username: usernameSchema,
   cityId: cityIdSchema,
   password: z.string().min(10),
   passwordConfirm: z.string().min(10)

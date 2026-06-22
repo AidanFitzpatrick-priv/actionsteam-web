@@ -12,7 +12,7 @@ export default async function AdminUsersPage() {
     <div className="container-wide">
       <h1>Users</h1>
       <p className="muted">
-        Disable accounts or change roles. You can only change roles for users below your rank.
+        Disable accounts, edit usernames, or change roles. You can only change roles for users below your rank.
         Only management can assign management.
       </p>
       <AdminUsersClient viewerRole={user.role} />
