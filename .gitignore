@@ -10,8 +10,8 @@ out/
 .env.local
 .env.*.local
 
-# Backups (local exports)
-backups/
+# Local JSON backup exports (not admin UI)
+/backups/
 
 # Debug
 npm-debug.log*

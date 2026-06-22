@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
-import { canCreateInvites, isFullAdmin, formatRole } from "@/lib/rbac";
+import { canCreateInvites, canViewBackups, isFullAdmin, formatRole } from "@/lib/rbac";
 import { LogoutButton } from "@/components/LogoutButton";
 import { prisma } from "@/lib/db";
 
@@ -46,10 +46,10 @@ export async function Nav() {
                 <Link href="/admin/data">Data</Link>
                 <Link href="/admin/users">Users</Link>
                 <Link href="/admin/tools">Tools</Link>
-                <Link href="/admin/backups">Backups</Link>
                 <Link href="/admin/audit">Audit</Link>
               </>
             )}
+            {canViewBackups(user.role) && <Link href="/admin/backups">Backups</Link>}
             <LogoutButton />
           </>
         ) : (

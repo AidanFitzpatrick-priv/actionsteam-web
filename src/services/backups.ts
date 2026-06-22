@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
-import { writeFile, mkdir, readFile } from "fs/promises";
+import { writeFile, mkdir, readFile, unlink } from "fs/promises";
 import path from "path";
 
 const BACKUP_DIR = path.join(process.cwd(), "backups");
+
+export const BACKUP_MAX_COUNT = 4;
+export const BACKUP_INTERVAL_MS = 12 * 60 * 60 * 1000;
 
 export async function listBackups() {
   const rows = await prisma.backup.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
@@ -16,6 +19,20 @@ export async function listBackups() {
     createdBy: r.createdBy,
     kind: r.kind
   }));
+}
+
+export async function pruneBackups(maxCount = BACKUP_MAX_COUNT) {
+  const rows = await prisma.backup.findMany({ orderBy: { createdAt: "desc" } });
+  const excess = rows.slice(maxCount);
+  for (const row of excess) {
+    const filePath = path.join(BACKUP_DIR, row.storageKey);
+    try {
+      await unlink(filePath);
+    } catch {
+      // File may already be missing (e.g. ephemeral Railway disk after redeploy)
+    }
+    await prisma.backup.delete({ where: { id: row.id } });
+  }
 }
 
 export async function runBackup(params?: { createdBy?: string; kind?: string }) {
@@ -48,7 +65,18 @@ export async function runBackup(params?: { createdBy?: string; kind?: string }) 
     }
   });
 
+  await pruneBackups(BACKUP_MAX_COUNT);
+
   return record;
+}
+
+/** Run scheduled backup if none in the last 12 hours. */
+export async function runScheduledBackupIfDue() {
+  const latest = await prisma.backup.findFirst({ orderBy: { createdAt: "desc" } });
+  if (latest && Date.now() - latest.createdAt.getTime() < BACKUP_INTERVAL_MS) {
+    return null;
+  }
+  return runBackup({ createdBy: "system", kind: "scheduled" });
 }
 
 /** Restore from local backup file — management-only for production use. */

@@ -4,6 +4,7 @@ import {
   canAssignRole,
   canEditUserRole,
   canHardDeleteMonth,
+  canViewBackups,
   canViewGoalScoreRow
 } from "@/lib/rbac";
 
@@ -64,6 +65,19 @@ describe("canHardDeleteMonth", () => {
     expect(canHardDeleteMonth("aux")).toBe(false);
     expect(canHardDeleteMonth("lead")).toBe(false);
     expect(canHardDeleteMonth("member")).toBe(false);
+  });
+});
+
+describe("canViewBackups", () => {
+  it("allows adm and management only", () => {
+    expect(canViewBackups("adm")).toBe(true);
+    expect(canViewBackups("management")).toBe(true);
+  });
+
+  it("denies aux and below", () => {
+    expect(canViewBackups("aux")).toBe(false);
+    expect(canViewBackups("lead")).toBe(false);
+    expect(canViewBackups("member")).toBe(false);
   });
 });
 

@@ -69,7 +69,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       orgName: body.orgName
     });
 
-    const { recalculateAllPoints } = await import("@/services/points");
+    const { recalculatePointsForMonth } = await import("@/services/points");
     const { publishScheduleChange, publishScheduleDerivedUpdates } = await import("@/services/live-sync");
     await publishScheduleChange({
       monthId: month.id,
@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       slotId: slot.id
     });
 
-    void recalculateAllPoints().then(() =>
+    void recalculatePointsForMonth(month.id).then(() =>
       publishScheduleDerivedUpdates({
         monthId: month.id,
         monthSlug: slug,

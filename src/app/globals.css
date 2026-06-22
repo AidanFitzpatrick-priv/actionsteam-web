@@ -238,6 +238,17 @@ h2 { font-size: 1.25rem; margin: 0 0 16px; }
   font-size: 1.5rem;
   margin-bottom: 4px;
 }
+.schedule-month-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  max-width: 280px;
+}
+.schedule-month-picker .select {
+  flex: 1;
+  min-width: 0;
+}
 .schedule-page-header .muted {
   font-size: 13px;
 }

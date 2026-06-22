@@ -4,27 +4,20 @@ import { useState } from "react";
 
 export function AdminToolsClient() {
   const [msg, setMsg] = useState("");
-  const [loading, setLoading] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function run(action: "recalculate" | "import_june_sheet") {
+  async function runRecalculate() {
     setMsg("");
-    setLoading(action);
+    setLoading(true);
     const res = await fetch("/api/admin/tools", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action })
+      body: JSON.stringify({ action: "recalculate" })
     });
     const data = await res.json();
-    setLoading("");
+    setLoading(false);
     if (!res.ok) {
       setMsg(data.error ?? "Failed");
-      return;
-    }
-    if (action === "import_june_sheet" && data.result) {
-      const r = data.result;
-      setMsg(
-        `Imported June schedule: ${r.updated} slots updated, ${r.reference.typesCount} types, ${r.reference.gangsCount} gangs.`
-      );
       return;
     }
     setMsg("Done.");
@@ -33,16 +26,13 @@ export function AdminToolsClient() {
   return (
     <div className="card">
       <h2>Admin tools</h2>
-      <p className="muted">Force recalc or import June sheet export into the schedule.</p>
+      <p className="muted">Force recalculate action and booking goal scores for the active month.</p>
       <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
-        <button type="button" className="btn" disabled={!!loading} onClick={() => run("import_june_sheet")}>
-          {loading === "import_june_sheet" ? "Importing…" : "Import June schedule (from sheet)"}
-        </button>
-        <button type="button" className="btn btn-secondary" disabled={!!loading} onClick={() => run("recalculate")}>
-          Force recalculate
+        <button type="button" className="btn" disabled={loading} onClick={runRecalculate}>
+          {loading ? "Recalculating…" : "Force recalculate"}
         </button>
       </div>
-      {msg && <p className={msg.startsWith("Imported") ? "success" : "error"} style={{ marginTop: 12 }}>{msg}</p>}
+      {msg && <p className={msg === "Done." ? "success" : "error"} style={{ marginTop: 12 }}>{msg}</p>}
     </div>
   );
 }

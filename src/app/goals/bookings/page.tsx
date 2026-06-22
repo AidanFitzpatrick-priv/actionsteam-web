@@ -7,7 +7,7 @@ export default async function BookingGoalsPage() {
   if (!user) redirect("/login");
   return (
     <div className="container-wide">
-      <GoalsClient kind="bookings" />
+      <GoalsClient kind="bookings" monthPicker />
     </div>
   );
 }

@@ -6,16 +6,21 @@ import { cleanName } from "@/lib/names";
 import { canViewGoalScoreRow } from "@/lib/rbac";
 import { UserRole } from "@prisma/client";
 import { ensureGoalWeekDates } from "@/services/goal-week";
-import { recalculateAllPoints } from "@/services/points";
+import { recalculateAllPoints, recalculatePointsForMonth } from "@/services/points";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await requireRole("member");
     const kind = req.nextUrl.searchParams.get("kind") ?? "actions";
-    const month = await prisma.month.findFirst({
-      where: { isActive: true, archivedAt: null }
-    });
-    if (!month) return jsonOk({ month: null, weekDates: [], scores: [] });
+    const monthSlug = req.nextUrl.searchParams.get("month");
+
+    let month = monthSlug
+      ? await prisma.month.findUnique({ where: { slug: monthSlug } })
+      : await prisma.month.findFirst({
+          where: { isActive: true, archivedAt: null }
+        });
+
+    if (!month || month.archivedAt) return jsonOk({ month: null, weekDates: [], scores: [] });
 
     let scores = await prisma.goalScore.findMany({
       where: { monthId: month.id, kind },
@@ -23,7 +28,11 @@ export async function GET(req: NextRequest) {
     });
 
     if (scores.length === 0) {
-      await recalculateAllPoints();
+      if (monthSlug || kind === "bookings") {
+        await recalculatePointsForMonth(month.id);
+      } else {
+        await recalculateAllPoints();
+      }
       scores = await prisma.goalScore.findMany({
         where: { monthId: month.id, kind },
         orderBy: [{ staffName: "asc" }, { dayIndex: "asc" }]

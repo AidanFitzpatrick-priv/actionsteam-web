@@ -18,7 +18,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "test": "vitest run",
-    "backup:run": "tsx scripts/nightly-backup.ts",
+    "backup:run": "tsx scripts/nightly-backup.ts --force",
     "import:schedule": "tsx scripts/import-schedule.ts"
   },
   "dependencies": {

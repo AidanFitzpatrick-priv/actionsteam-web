@@ -94,11 +94,9 @@ export function accumulateBookingPointsFromSlots(
   }
 }
 
-export async function recalculateAllPoints() {
-  const activeMonth = await prisma.month.findFirst({
-    where: { isActive: true, archivedAt: null }
-  });
-  if (!activeMonth) {
+export async function recalculatePointsForMonth(monthId: string) {
+  const month = await prisma.month.findUnique({ where: { id: monthId } });
+  if (!month || month.archivedAt) {
     return { actionScores: {}, bookingScores: {}, weekDates: Array(7).fill(null) };
   }
 
@@ -107,10 +105,10 @@ export async function recalculateAllPoints() {
   const actionScores = initScores(keys);
   const bookingScores = initScores(keys);
 
-  const weekDates = await ensureGoalWeekDates(activeMonth);
+  const weekDates = await ensureGoalWeekDates(month);
 
   const trackerRows = await prisma.trackerRow.findMany({
-    where: { monthId: activeMonth.id, deletedAt: null },
+    where: { monthId: month.id, deletedAt: null },
     select: {
       actionDate: true,
       status: true,
@@ -122,15 +120,26 @@ export async function recalculateAllPoints() {
   accumulateActionPointsFromTracker(trackerRows, actionScores, weekDates);
 
   const scheduleSlots = await prisma.scheduleSlot.findMany({
-    where: { monthId: activeMonth.id, deletedAt: null },
+    where: { monthId: month.id, deletedAt: null },
     select: { dateBooked: true, bookedBy: true }
   });
   accumulateBookingPointsFromSlots(scheduleSlots, bookingScores, weekDates);
 
-  await persistGoalScores(activeMonth.id, "actions", actionScores, displayByKey);
-  await persistGoalScores(activeMonth.id, "bookings", bookingScores, displayByKey);
+  await persistGoalScores(month.id, "actions", actionScores, displayByKey);
+  await persistGoalScores(month.id, "bookings", bookingScores, displayByKey);
 
   return { actionScores, bookingScores, weekDates };
+}
+
+export async function recalculateAllPoints() {
+  const activeMonth = await prisma.month.findFirst({
+    where: { isActive: true, archivedAt: null }
+  });
+  if (!activeMonth) {
+    return { actionScores: {}, bookingScores: {}, weekDates: Array(7).fill(null) };
+  }
+
+  return recalculatePointsForMonth(activeMonth.id);
 }
 
 async function persistGoalScores(

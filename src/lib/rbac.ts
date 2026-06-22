@@ -60,6 +60,10 @@ export function canHardDeleteMonth(role: UserRole): boolean {
   return role === "adm" || role === "management";
 }
 
+export function canViewBackups(role: UserRole): boolean {
+  return role === "adm" || role === "management";
+}
+
 /** Goal scores: own row + everyone strictly below viewer rank; adm/management see all. */
 export function canViewGoalScoreRow(
   viewerRole: UserRole,

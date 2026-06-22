@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatDateUKShort } from "@/lib/dates";
 import { useLiveSync, useEditingIds, liveFetchOpts } from "@/hooks/useLiveSync";
 
@@ -49,6 +50,20 @@ type Dropdowns = {
   org2: string[];
   accountUsers: string[];
 };
+
+type MonthOption = {
+  id: string;
+  name: string;
+  slug: string;
+  year: number | null;
+  isActive: boolean;
+};
+
+function monthLabel(m: MonthOption): string {
+  const year = m.year ? ` ${m.year}` : "";
+  const active = m.isActive ? " (active)" : "";
+  return `${m.name}${year}${active}`;
+}
 
 function slotIsFilled(slot: Slot): boolean {
   return Boolean(slot.typeName?.trim() || slot.orgName?.trim() || slot.bookedBy?.trim());
@@ -138,7 +153,14 @@ function ScheduleSlotCell({
   );
 }
 
-export function ScheduleClient({ slug, monthName }: { slug: string; monthName: string }) {
+export function ScheduleClient({
+  slug,
+  months
+}: {
+  slug: string;
+  months: MonthOption[];
+}) {
+  const router = useRouter();
   const [slots, setSlots] = useState<Slot[]>([]);
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [dropdowns, setDropdowns] = useState<Dropdowns | null>(null);
@@ -259,6 +281,23 @@ export function ScheduleClient({ slug, monthName }: { slug: string; monthName: s
   return (
     <div className="schedule-page">
       <div className="schedule-page-header">
+        <div className="schedule-month-picker">
+          <label htmlFor="schedule-month" className="muted" style={{ fontSize: 13 }}>
+            Month
+          </label>
+          <select
+            id="schedule-month"
+            className="select"
+            value={slug}
+            onChange={e => router.push(`/months/${e.target.value}/schedule`)}
+          >
+            {months.map(m => (
+              <option key={m.slug} value={m.slug}>
+                {monthLabel(m)}
+              </option>
+            ))}
+          </select>
+        </div>
         <h1>
           {calendar.monthName} {calendar.year} — Actions Schedule
         </h1>

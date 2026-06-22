@@ -1,6 +1,7 @@
 /**
- * Manual backup CLI — runs if due (12h) unless --force.
- * npm run backup:run — force backup for cron / manual use.
+ * Scheduled backup runner — checks 12h interval, prunes to max 4.
+ * Invoked on startup and every 12h from scripts/railway-start.js (BACKUP_ENABLED !== false).
+ * Note: backups/ on Railway is ephemeral unless a volume is mounted.
  */
 import { runScheduledBackupIfDue, runBackup } from "../src/services/backups";
 
