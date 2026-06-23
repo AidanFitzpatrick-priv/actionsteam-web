@@ -23,7 +23,6 @@ export async function PATCH(req: NextRequest) {
       .object({
         userId: z.string(),
         role: z.nativeEnum(UserRole).optional(),
-        disabled: z.boolean().optional(),
         username: usernameSchema.optional(),
         cityId: optionalCityIdSchema,
         discordId: discordIdSchema
@@ -36,7 +35,6 @@ export async function PATCH(req: NextRequest) {
       actorUserId: actor.id,
       actorRole: actor.role,
       role: body.role,
-      disabled: body.disabled,
       username: body.username,
       cityId: body.cityId,
       discordId: body.discordId,
@@ -46,6 +44,27 @@ export async function PATCH(req: NextRequest) {
     await publishAdminChange(actor.id, "users");
 
     return jsonOk({ user: updated });
+  } catch (e) {
+    return jsonError(e);
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const actor = await requireRole("aux");
+    const body = z.object({ userId: z.string() }).parse(await req.json());
+    const meta = getMeta(req);
+
+    await users.deleteUser({
+      userId: body.userId,
+      actorUserId: actor.id,
+      actorRole: actor.role,
+      ipAddress: meta.ipAddress
+    });
+
+    await publishAdminChange(actor.id, "users");
+
+    return jsonOk({ ok: true });
   } catch (e) {
     return jsonError(e);
   }

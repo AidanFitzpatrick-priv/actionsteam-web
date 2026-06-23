@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { UserRole } from "@prisma/client";
-import { allowedRoleOptionsForActor, canEditUserRole, canEditUsername, formatRole } from "@/lib/rbac";
+import { allowedRoleOptionsForActor, canDeleteUser, canEditUserRole, canEditUsername, formatRole } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type UserRow = {
@@ -12,10 +12,15 @@ type UserRow = {
   cityId: string | null;
   discordId: string | null;
   role: UserRole;
-  disabledAt: string | null;
 };
 
-export function AdminUsersClient({ viewerRole }: { viewerRole: UserRole }) {
+export function AdminUsersClient({
+  viewerRole,
+  viewerUserId
+}: {
+  viewerRole: UserRole;
+  viewerUserId: string;
+}) {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [usernameDraft, setUsernameDraft] = useState<Record<string, string>>({});
   const [cityDraft, setCityDraft] = useState<Record<string, string>>({});
@@ -63,7 +68,7 @@ export function AdminUsersClient({ viewerRole }: { viewerRole: UserRole }) {
 
   async function patch(
     userId: string,
-    patch: { role?: UserRole; disabled?: boolean; username?: string; cityId?: string | null; discordId?: string | null }
+    patch: { role?: UserRole; username?: string; cityId?: string | null; discordId?: string | null }
   ) {
     const res = await fetch("/api/admin/users", {
       method: "PATCH",
@@ -73,6 +78,20 @@ export function AdminUsersClient({ viewerRole }: { viewerRole: UserRole }) {
     if (!res.ok) {
       const data = await res.json();
       alert(data.error ?? "Update failed");
+    }
+    await load();
+  }
+
+  async function removeUser(user: UserRow) {
+    if (!confirm(`Permanently delete ${user.username}? This cannot be undone.`)) return;
+    const res = await fetch("/api/admin/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id })
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error ?? "Delete failed");
     }
     await load();
   }
@@ -103,13 +122,13 @@ export function AdminUsersClient({ viewerRole }: { viewerRole: UserRole }) {
             <th>City ID</th>
             <th>Discord ID</th>
             <th>Role</th>
-            <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {users.map(u => {
             const canEditRole = canEditUserRole(viewerRole, u.role);
+            const canRemove = u.id !== viewerUserId && canDeleteUser(viewerRole, u.role);
             const roleOptions = canEditRole
               ? assignableRoles.includes(u.role)
                 ? assignableRoles
@@ -168,11 +187,12 @@ export function AdminUsersClient({ viewerRole }: { viewerRole: UserRole }) {
                     <span className="muted">{formatRole(u.role)}</span>
                   )}
                 </td>
-                <td>{u.disabledAt ? "Disabled" : "Active"}</td>
                 <td>
-                  <button type="button" className="btn btn-secondary" onClick={() => patch(u.id, { disabled: !u.disabledAt })}>
-                    {u.disabledAt ? "Enable" : "Disable"}
-                  </button>
+                  {canRemove && (
+                    <button type="button" className="btn btn-danger" onClick={() => removeUser(u)}>
+                      Delete
+                    </button>
+                  )}
                 </td>
               </tr>
             );

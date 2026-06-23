@@ -3,6 +3,7 @@ import {
   allowedRoleOptionsForActor,
   canAssignRole,
   canEditUserRole,
+  canDeleteUser,
   canEditUsername,
   canHardDeleteMonth,
   canViewBackups,
@@ -53,6 +54,20 @@ describe("canAssignRole", () => {
   it("allows assigning below actor", () => {
     expect(canAssignRole("aux", "member")).toBe(true);
     expect(canAssignRole("management", "adm")).toBe(true);
+  });
+});
+
+describe("canDeleteUser", () => {
+  it("allows aux+ to delete strictly below rank", () => {
+    expect(canDeleteUser("aux", "member")).toBe(true);
+    expect(canDeleteUser("adm", "aux")).toBe(true);
+    expect(canDeleteUser("management", "adm")).toBe(true);
+  });
+
+  it("blocks same rank or higher", () => {
+    expect(canDeleteUser("aux", "aux")).toBe(false);
+    expect(canDeleteUser("aux", "adm")).toBe(false);
+    expect(canDeleteUser("lead", "member")).toBe(false);
   });
 });
 

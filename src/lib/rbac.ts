@@ -69,6 +69,11 @@ export function canEditUsername(role: UserRole): boolean {
   return hasMinRole(role, "aux");
 }
 
+/** Admin → Users: aux+ may delete users strictly below their rank. */
+export function canDeleteUser(actorRole: UserRole, targetUserRole: UserRole): boolean {
+  return hasMinRole(actorRole, "aux") && roleLevel(targetUserRole) < roleLevel(actorRole);
+}
+
 /** Goal scores: own row + everyone strictly below viewer rank; adm/management see all. */
 export function canViewGoalScoreRow(
   viewerRole: UserRole,

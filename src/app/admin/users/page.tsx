@@ -12,10 +12,10 @@ export default async function AdminUsersPage() {
     <div className="container-wide">
       <h1>Users</h1>
       <p className="muted">
-        Disable accounts, edit usernames, or change roles. You can only change roles for users below your rank.
+        Edit usernames, roles, and IDs, or permanently delete users below your rank. You cannot delete yourself.
         Only management can assign management.
       </p>
-      <AdminUsersClient viewerRole={user.role} />
+      <AdminUsersClient viewerRole={user.role} viewerUserId={user.id} />
     </div>
   );
 }

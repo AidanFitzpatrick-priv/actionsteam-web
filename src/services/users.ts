@@ -1,7 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
-import { formatRole, canEditUserRole, canAssignRole, canEditUsername } from "@/lib/rbac";
+import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteUser } from "@/lib/rbac";
 import { usernameSchema } from "@/lib/user-fields";
 
 export async function listUsers() {
@@ -23,7 +23,6 @@ export async function listUsers() {
     role: u.role,
     roleLabel: formatRole(u.role),
     createdAt: u.createdAt,
-    disabledAt: u.disabledAt,
     invitedBy: u.invitedViaInvite?.createdBy?.username ?? null
   }));
 }
@@ -33,7 +32,6 @@ export async function updateUser(params: {
   actorUserId: string;
   actorRole: UserRole;
   role?: UserRole;
-  disabled?: boolean;
   username?: string;
   cityId?: string | null;
   discordId?: string | null;
@@ -78,15 +76,11 @@ export async function updateUser(params: {
 
   const data: {
     role?: UserRole;
-    disabledAt?: Date | null;
     username?: string;
     cityId?: string | null;
     discordId?: string | null;
   } = {};
   if (params.role !== undefined) data.role = params.role;
-  if (params.disabled !== undefined) {
-    data.disabledAt = params.disabled ? new Date() : null;
-  }
   if (params.username !== undefined) {
     data.username = usernameSchema.parse(params.username);
   }
@@ -107,9 +101,43 @@ export async function updateUser(params: {
     action: "user.update",
     entityType: "user",
     entityId: params.userId,
-    payload: { role: params.role, disabled: params.disabled, username: params.username, cityId: params.cityId, discordId: params.discordId },
+    payload: { role: params.role, username: params.username, cityId: params.cityId, discordId: params.discordId },
     ipAddress: params.ipAddress
   });
 
   return updated;
+}
+
+export async function deleteUser(params: {
+  userId: string;
+  actorUserId: string;
+  actorRole: UserRole;
+  ipAddress?: string | null;
+}) {
+  const target = await prisma.user.findUnique({ where: { id: params.userId } });
+  if (!target) throw new Error("User not found");
+
+  if (target.id === params.actorUserId) {
+    throw new Error("You cannot delete your own account");
+  }
+
+  if (!canDeleteUser(params.actorRole, target.role)) {
+    throw new Error("You cannot delete someone at or above your rank");
+  }
+
+  await prisma.$transaction([
+    prisma.invite.deleteMany({ where: { createdByUserId: params.userId } }),
+    prisma.user.delete({ where: { id: params.userId } })
+  ]);
+
+  await writeAuditLog({
+    userId: params.actorUserId,
+    action: "user.delete",
+    entityType: "user",
+    entityId: params.userId,
+    payload: { username: target.username, email: target.email, role: target.role },
+    ipAddress: params.ipAddress
+  });
+
+  return { ok: true };
 }
