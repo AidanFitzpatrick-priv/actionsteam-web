@@ -1,5 +1,7 @@
+import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
+import { shouldShowOnGoalTracker } from "@/lib/rbac";
 
 export async function listStaff() {
   return prisma.staff.findMany({
@@ -177,7 +179,7 @@ export async function getDropdownOptions() {
     prisma.user.findMany({
       where: { disabledAt: null },
       orderBy: { username: "asc" },
-      select: { username: true }
+      select: { username: true, role: true, hiddenFromGoalTrackers: true }
     })
   ]);
 
@@ -186,7 +188,9 @@ export async function getDropdownOptions() {
 
   return {
     staff: staff.filter(s => s.active).map(s => s.name),
-    accountUsers: accountUsers.map(u => u.username),
+    accountUsers: accountUsers
+      .filter(u => shouldShowOnGoalTracker(u.role as UserRole, u.hiddenFromGoalTrackers))
+      .map(u => u.username),
     types: types.map(t => ({ name: t.name, colourHex: t.colourHex })),
     org1: org1Names,
     org2: org2Names,

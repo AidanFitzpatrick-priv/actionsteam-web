@@ -13,7 +13,8 @@ export default async function AdminUsersPage() {
       <h1>Users</h1>
       <p className="muted">
         Edit usernames, roles, and IDs, or permanently delete users below your rank. You cannot delete yourself.
-        Only management can assign management.
+        Only management can assign management. Management can hide cross-team accounts from goal score pages and
+        schedule/tracker dropdowns.
       </p>
       <AdminUsersClient viewerRole={user.role} viewerUserId={user.id} />
     </div>

@@ -25,7 +25,8 @@ export async function PATCH(req: NextRequest) {
         role: z.nativeEnum(UserRole).optional(),
         username: usernameSchema.optional(),
         cityId: optionalCityIdSchema,
-        discordId: discordIdSchema
+        discordId: discordIdSchema,
+        hiddenFromGoalTrackers: z.boolean().optional()
       })
       .parse(await req.json());
     const meta = getMeta(req);
@@ -38,6 +39,7 @@ export async function PATCH(req: NextRequest) {
       username: body.username,
       cityId: body.cityId,
       discordId: body.discordId,
+      hiddenFromGoalTrackers: body.hiddenFromGoalTrackers,
       ipAddress: meta.ipAddress
     });
 

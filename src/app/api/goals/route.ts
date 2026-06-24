@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const [users, staff] = await Promise.all([
       prisma.user.findMany({
         where: { disabledAt: null },
-        select: { username: true, role: true }
+        select: { username: true, role: true, hiddenFromGoalTrackers: true }
       }),
       prisma.staff.findMany({
         where: { deletedAt: null, active: true },
@@ -53,13 +53,16 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
-    const roleByKey = new Map<string, UserRole>();
+    const userMetaByKey = new Map<string, { role: UserRole; hidden: boolean }>();
     for (const u of users) {
-      roleByKey.set(cleanName(u.username), u.role);
+      userMetaByKey.set(cleanName(u.username), {
+        role: u.role,
+        hidden: u.hiddenFromGoalTrackers
+      });
     }
     for (const s of staff) {
       const k = cleanName(s.name);
-      if (!roleByKey.has(k)) roleByKey.set(k, "member");
+      if (!userMetaByKey.has(k)) userMetaByKey.set(k, { role: "member", hidden: false });
     }
 
     const viewerKey = cleanName(user.username);
@@ -74,17 +77,17 @@ export async function GET(req: NextRequest) {
       [...byStaff.entries()]
         .filter(([staffName]) => {
           const key = cleanName(staffName);
-          const targetRole = roleByKey.get(key) ?? "member";
+          const meta = userMetaByKey.get(key) ?? { role: "member" as UserRole, hidden: false };
           const isOwn = key === viewerKey;
-          if (!shouldShowOnGoalTracker(targetRole)) return false;
-          return canViewGoalScoreRow(user.role, targetRole, isOwn);
+          if (!shouldShowOnGoalTracker(meta.role, meta.hidden)) return false;
+          return canViewGoalScoreRow(user.role, meta.role, isOwn);
         })
         .map(([staffName, points]) => {
           const key = cleanName(staffName);
-          const role = roleByKey.get(key) ?? "member";
+          const meta = userMetaByKey.get(key) ?? { role: "member" as UserRole, hidden: false };
           return {
             staffName,
-            role,
+            role: meta.role,
             points,
             total: points.reduce((a, b) => a + b, 0)
           };

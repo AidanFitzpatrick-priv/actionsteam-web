@@ -7,6 +7,7 @@ import {
   canEditUsername,
   canHardDeleteMonth,
   canViewBackups,
+  canManageGoalTrackerVisibility,
   canViewGoalScoreRow,
   shouldShowOnGoalTracker,
   sortGoalTrackerRows
@@ -112,17 +113,31 @@ describe("canViewBackups", () => {
   });
 });
 
+describe("canManageGoalTrackerVisibility", () => {
+  it("allows management only", () => {
+    expect(canManageGoalTrackerVisibility("management")).toBe(true);
+    expect(canManageGoalTrackerVisibility("adm")).toBe(false);
+    expect(canManageGoalTrackerVisibility("aux")).toBe(false);
+  });
+});
+
 describe("shouldShowOnGoalTracker", () => {
   it("excludes management", () => {
     expect(shouldShowOnGoalTracker("management")).toBe(false);
   });
 
-  it("includes other roles", () => {
+  it("excludes users hidden from goal trackers", () => {
+    expect(shouldShowOnGoalTracker("member", true)).toBe(false);
+    expect(shouldShowOnGoalTracker("adm", true)).toBe(false);
+  });
+
+  it("includes other roles when not hidden", () => {
     expect(shouldShowOnGoalTracker("adm")).toBe(true);
     expect(shouldShowOnGoalTracker("aux")).toBe(true);
     expect(shouldShowOnGoalTracker("lead")).toBe(true);
     expect(shouldShowOnGoalTracker("sub_lead")).toBe(true);
     expect(shouldShowOnGoalTracker("member")).toBe(true);
+    expect(shouldShowOnGoalTracker("member", false)).toBe(true);
   });
 });
 

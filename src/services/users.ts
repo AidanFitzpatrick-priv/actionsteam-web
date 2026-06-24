@@ -1,7 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
-import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteUser } from "@/lib/rbac";
+import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteUser, canManageGoalTrackerVisibility } from "@/lib/rbac";
 import { usernameSchema } from "@/lib/user-fields";
 import { publishUserGoalSync, removeUserFromGoalData, renameUserDisplayNameInSources, recalculateNonArchivedMonths } from "@/services/user-sync";
 
@@ -23,6 +23,7 @@ export async function listUsers() {
     discordId: u.discordId,
     role: u.role,
     roleLabel: formatRole(u.role),
+    hiddenFromGoalTrackers: u.hiddenFromGoalTrackers,
     createdAt: u.createdAt,
     invitedBy: u.invitedViaInvite?.createdBy?.username ?? null
   }));
@@ -36,6 +37,7 @@ export async function updateUser(params: {
   username?: string;
   cityId?: string | null;
   discordId?: string | null;
+  hiddenFromGoalTrackers?: boolean;
   ipAddress?: string | null;
 }) {
   const target = await prisma.user.findUnique({ where: { id: params.userId } });
@@ -67,6 +69,12 @@ export async function updateUser(params: {
     if (taken) throw new Error("Username is already taken");
   }
 
+  if (params.hiddenFromGoalTrackers !== undefined) {
+    if (!canManageGoalTrackerVisibility(params.actorRole)) {
+      throw new Error("Only management can change goal tracker visibility");
+    }
+  }
+
   const usernameChanging =
     params.username !== undefined &&
     usernameSchema.parse(params.username) !== target.username;
@@ -88,6 +96,7 @@ export async function updateUser(params: {
     username?: string;
     cityId?: string | null;
     discordId?: string | null;
+    hiddenFromGoalTrackers?: boolean;
   } = {};
   if (params.role !== undefined) data.role = params.role;
   if (params.username !== undefined) {
@@ -99,6 +108,13 @@ export async function updateUser(params: {
   if (params.discordId !== undefined) {
     data.discordId = params.discordId?.trim() || null;
   }
+  if (params.hiddenFromGoalTrackers !== undefined) {
+    data.hiddenFromGoalTrackers = params.hiddenFromGoalTrackers;
+  }
+
+  const hiddenChanging =
+    params.hiddenFromGoalTrackers !== undefined &&
+    params.hiddenFromGoalTrackers !== target.hiddenFromGoalTrackers;
 
   const updated = await prisma.user.update({
     where: { id: params.userId },
@@ -110,11 +126,22 @@ export async function updateUser(params: {
     action: "user.update",
     entityType: "user",
     entityId: params.userId,
-    payload: { role: params.role, username: params.username, cityId: params.cityId, discordId: params.discordId },
+    payload: {
+      role: params.role,
+      username: params.username,
+      cityId: params.cityId,
+      discordId: params.discordId,
+      hiddenFromGoalTrackers: params.hiddenFromGoalTrackers
+    },
     ipAddress: params.ipAddress
   });
 
   if (usernameChanging) {
+    await recalculateNonArchivedMonths();
+    await publishUserGoalSync(params.actorUserId);
+  }
+
+  if (hiddenChanging) {
     await recalculateNonArchivedMonths();
     await publishUserGoalSync(params.actorUserId);
   }

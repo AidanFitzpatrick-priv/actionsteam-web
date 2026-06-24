@@ -85,9 +85,19 @@ export function canViewGoalScoreRow(
   return roleLevel(targetRole) < roleLevel(viewerRole);
 }
 
-/** Goal tracker rows: management accounts are never listed. */
-export function shouldShowOnGoalTracker(targetRole: UserRole): boolean {
-  return targetRole !== "management";
+/** Only management may toggle goal-tracker visibility for other users. */
+export function canManageGoalTrackerVisibility(actorRole: UserRole): boolean {
+  return actorRole === "management";
+}
+
+/** Goal tracker row visibility (role + per-user flag). Also used for account-user dropdowns. */
+export function shouldShowOnGoalTracker(
+  targetRole: UserRole,
+  hiddenFromGoalTrackers = false
+): boolean {
+  if (targetRole === "management") return false;
+  if (hiddenFromGoalTrackers) return false;
+  return true;
 }
 
 /** Goal tracker section order (top → bottom); excludes management. */

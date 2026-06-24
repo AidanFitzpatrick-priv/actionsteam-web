@@ -4,6 +4,8 @@
 import { prisma } from "@/lib/db";
 import { isSameYMD } from "@/lib/dates";
 import { cleanName, normalizeStatus, splitPeopleList } from "@/lib/names";
+import { shouldShowOnGoalTracker } from "@/lib/rbac";
+import { UserRole } from "@prisma/client";
 import { ensureGoalWeekDates } from "@/services/goal-week";
 
 type ScoreMap = Record<string, number[]>;
@@ -30,7 +32,7 @@ async function buildScoreParticipants(): Promise<Map<string, string>> {
     prisma.staff.findMany({ where: { deletedAt: null, active: true } }),
     prisma.user.findMany({
       where: { disabledAt: null },
-      select: { username: true }
+      select: { username: true, role: true, hiddenFromGoalTrackers: true }
     })
   ]);
 
@@ -40,6 +42,7 @@ async function buildScoreParticipants(): Promise<Map<string, string>> {
     if (k) displayByKey.set(k, s.name);
   }
   for (const u of users) {
+    if (!shouldShowOnGoalTracker(u.role as UserRole, u.hiddenFromGoalTrackers)) continue;
     const k = cleanName(u.username);
     if (k && !displayByKey.has(k)) displayByKey.set(k, u.username);
   }

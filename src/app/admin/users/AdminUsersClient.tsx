@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { UserRole } from "@prisma/client";
-import { allowedRoleOptionsForActor, canDeleteUser, canEditUserRole, canEditUsername, formatRole } from "@/lib/rbac";
+import { allowedRoleOptionsForActor, canDeleteUser, canEditUserRole, canEditUsername, canManageGoalTrackerVisibility, formatRole } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type UserRow = {
@@ -12,6 +12,7 @@ type UserRow = {
   cityId: string | null;
   discordId: string | null;
   role: UserRole;
+  hiddenFromGoalTrackers?: boolean;
 };
 
 export function AdminUsersClient({
@@ -27,6 +28,7 @@ export function AdminUsersClient({
   const [discordDraft, setDiscordDraft] = useState<Record<string, string>>({});
   const assignableRoles = allowedRoleOptionsForActor(viewerRole);
   const canEditNames = canEditUsername(viewerRole);
+  const canManageGoalVisibility = canManageGoalTrackerVisibility(viewerRole);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/users");
@@ -68,7 +70,7 @@ export function AdminUsersClient({
 
   async function patch(
     userId: string,
-    patch: { role?: UserRole; username?: string; cityId?: string | null; discordId?: string | null }
+    patch: { role?: UserRole; username?: string; cityId?: string | null; discordId?: string | null; hiddenFromGoalTrackers?: boolean }
   ) {
     const res = await fetch("/api/admin/users", {
       method: "PATCH",
@@ -122,6 +124,7 @@ export function AdminUsersClient({
             <th>City ID</th>
             <th>Discord ID</th>
             <th>Role</th>
+            {canManageGoalVisibility && <th>Goal trackers</th>}
             <th>Actions</th>
           </tr>
         </thead>
@@ -187,6 +190,25 @@ export function AdminUsersClient({
                     <span className="muted">{formatRole(u.role)}</span>
                   )}
                 </td>
+                {canManageGoalVisibility && (
+                  <td>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(u.hiddenFromGoalTrackers)}
+                        onChange={e =>
+                          patch(u.id, { hiddenFromGoalTrackers: e.target.checked })
+                        }
+                      />
+                      Hide from goals
+                    </label>
+                    {u.hiddenFromGoalTrackers && (
+                      <span className="badge" style={{ marginTop: 4, display: "inline-block" }}>
+                        Hidden from goals
+                      </span>
+                    )}
+                  </td>
+                )}
                 <td>
                   {canRemove && (
                     <button type="button" className="btn btn-danger" onClick={() => removeUser(u)}>

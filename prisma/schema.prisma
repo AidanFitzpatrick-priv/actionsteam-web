@@ -32,7 +32,8 @@ model User {
   updatedAt          DateTime  @updatedAt @map("updated_at")
   disabledAt         DateTime? @map("disabled_at")
   invitedViaInviteId String?   @unique @map("invited_via_invite_id")
-  mustResetPassword  Boolean   @default(false) @map("must_reset_password")
+  mustResetPassword       Boolean   @default(false) @map("must_reset_password")
+  hiddenFromGoalTrackers  Boolean   @default(false) @map("hidden_from_goal_trackers")
 
   invitedViaInvite Invite?  @relation("UserInvite", fields: [invitedViaInviteId], references: [id])
   invitesCreated   Invite[] @relation("InviteCreatedBy")
