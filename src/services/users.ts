@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
 import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteUser } from "@/lib/rbac";
 import { usernameSchema } from "@/lib/user-fields";
+import { publishUserGoalSync, removeUserFromGoalData, renameUserDisplayNameInSources, recalculateNonArchivedMonths } from "@/services/user-sync";
 
 export async function listUsers() {
   const users = await prisma.user.findMany({
@@ -66,6 +67,14 @@ export async function updateUser(params: {
     if (taken) throw new Error("Username is already taken");
   }
 
+  const usernameChanging =
+    params.username !== undefined &&
+    usernameSchema.parse(params.username) !== target.username;
+
+  if (usernameChanging) {
+    await renameUserDisplayNameInSources(target.username, params.username!);
+  }
+
   if (params.cityId !== undefined && params.cityId?.trim()) {
     const cityId = params.cityId.trim();
     const taken = await prisma.user.findFirst({
@@ -105,6 +114,11 @@ export async function updateUser(params: {
     ipAddress: params.ipAddress
   });
 
+  if (usernameChanging) {
+    await recalculateNonArchivedMonths();
+    await publishUserGoalSync(params.actorUserId);
+  }
+
   return updated;
 }
 
@@ -125,10 +139,16 @@ export async function deleteUser(params: {
     throw new Error("You cannot delete someone at or above your rank");
   }
 
+  const deletedUsername = target.username;
+
+  await removeUserFromGoalData(deletedUsername);
+
   await prisma.$transaction([
     prisma.invite.deleteMany({ where: { createdByUserId: params.userId } }),
     prisma.user.delete({ where: { id: params.userId } })
   ]);
+
+  await recalculateNonArchivedMonths();
 
   await writeAuditLog({
     userId: params.actorUserId,
@@ -138,6 +158,8 @@ export async function deleteUser(params: {
     payload: { username: target.username, email: target.email, role: target.role },
     ipAddress: params.ipAddress
   });
+
+  await publishUserGoalSync(params.actorUserId);
 
   return { ok: true };
 }

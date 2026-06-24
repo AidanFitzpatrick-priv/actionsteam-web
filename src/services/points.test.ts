@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { accumulateBookingPointsFromSlots } from "@/services/points";
+import { accumulateBookingPointsFromSlots, pruneOrphanedGoalScores } from "@/services/points";
 
 describe("accumulateBookingPointsFromSlots", () => {
   it("adds booking points for slots on matching week days", () => {
@@ -45,5 +45,11 @@ describe("recalculatePointsForMonth (booking scope)", () => {
   it("is exported and month-scoped via schedule slots", async () => {
     const { recalculatePointsForMonth } = await import("@/services/points");
     expect(typeof recalculatePointsForMonth).toBe("function");
+  });
+});
+
+describe("pruneOrphanedGoalScores", () => {
+  it("is exported for goal score cleanup", () => {
+    expect(typeof pruneOrphanedGoalScores).toBe("function");
   });
 });

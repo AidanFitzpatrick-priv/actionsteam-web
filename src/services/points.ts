@@ -128,6 +128,9 @@ export async function recalculatePointsForMonth(monthId: string) {
   await persistGoalScores(month.id, "actions", actionScores, displayByKey);
   await persistGoalScores(month.id, "bookings", bookingScores, displayByKey);
 
+  await pruneOrphanedGoalScores(month.id, "actions", displayByKey);
+  await pruneOrphanedGoalScores(month.id, "bookings", displayByKey);
+
   return { actionScores, bookingScores, weekDates };
 }
 
@@ -165,6 +168,22 @@ async function persistGoalScores(
       });
     }
   }
+}
+
+/** Drop goal rows for names no longer in the participant list (renamed/deleted users). */
+export async function pruneOrphanedGoalScores(
+  monthId: string,
+  kind: string,
+  displayByKey: Map<string, string>
+) {
+  const allowed = new Set(displayByKey.values());
+  const rows = await prisma.goalScore.findMany({
+    where: { monthId, kind },
+    select: { id: true, staffName: true }
+  });
+  const orphanIds = rows.filter(r => !allowed.has(r.staffName)).map(r => r.id);
+  if (orphanIds.length === 0) return;
+  await prisma.goalScore.deleteMany({ where: { id: { in: orphanIds } } });
 }
 
 export function computeMonthlyActionTotals(

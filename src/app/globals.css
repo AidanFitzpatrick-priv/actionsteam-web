@@ -121,6 +121,16 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
   border-top: 2px solid var(--border);
   padding-top: 12px;
 }
+.goal-met {
+  color: #86efac;
+  font-weight: 700;
+  text-align: center;
+}
+.goal-not-met {
+  color: #fca5a5;
+  font-weight: 700;
+  text-align: center;
+}
 
 .badge {
   display: inline-block;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
 import type { UserRole } from "@prisma/client";
 import { GOAL_TRACKER_ROLE_GROUPS } from "@/lib/rbac";
+import { goalMet } from "@/lib/goals";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type MonthOption = {
@@ -101,7 +102,7 @@ export function GoalsClient({
   const dayLabels = data.weekDates.length === 7
     ? data.weekDates
     : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const colCount = dayLabels.length + 2;
+  const colCount = dayLabels.length + 3;
 
   return (
     <div>
@@ -137,6 +138,7 @@ export function GoalsClient({
               <th>Staff</th>
               {dayLabels.map((d, i) => <th key={i}>{d}</th>)}
               <th>Total</th>
+              <th>Goal</th>
             </tr>
           </thead>
           <tbody>
@@ -150,6 +152,12 @@ export function GoalsClient({
                     <td>{s.staffName}</td>
                     {s.points.map((p, i) => <td key={i}>{p}</td>)}
                     <td><strong>{s.total}</strong></td>
+                    <td
+                      className={goalMet(s.total) ? "goal-met" : "goal-not-met"}
+                      aria-label={goalMet(s.total) ? "Goal met" : "Goal not met"}
+                    >
+                      {goalMet(s.total) ? "✓" : "✗"}
+                    </td>
                   </tr>
                 ))}
               </Fragment>
