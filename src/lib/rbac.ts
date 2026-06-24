@@ -84,3 +84,34 @@ export function canViewGoalScoreRow(
   if (viewerRole === "adm" || viewerRole === "management") return true;
   return roleLevel(targetRole) < roleLevel(viewerRole);
 }
+
+/** Goal tracker rows: management accounts are never listed. */
+export function shouldShowOnGoalTracker(targetRole: UserRole): boolean {
+  return targetRole !== "management";
+}
+
+/** Goal tracker section order (top → bottom); excludes management. */
+export const GOAL_TRACKER_ROLE_GROUPS: { role: UserRole; label: string }[] = [
+  { role: "adm", label: "Adm" },
+  { role: "aux", label: "Aux" },
+  { role: "lead", label: "Lead" },
+  { role: "sub_lead", label: "S. Ld" },
+  { role: "member", label: "Member" }
+];
+
+export type GoalTrackerScoreRow = {
+  staffName: string;
+  role: UserRole;
+  points: number[];
+  total: number;
+};
+
+export function sortGoalTrackerRows(rows: GoalTrackerScoreRow[]): GoalTrackerScoreRow[] {
+  const order = new Map(GOAL_TRACKER_ROLE_GROUPS.map((g, i) => [g.role, i]));
+  return [...rows].sort((a, b) => {
+    const ai = order.get(a.role) ?? 999;
+    const bi = order.get(b.role) ?? 999;
+    if (ai !== bi) return ai - bi;
+    return a.staffName.localeCompare(b.staffName, undefined, { sensitivity: "base" });
+  });
+}

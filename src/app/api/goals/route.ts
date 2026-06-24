@@ -3,7 +3,7 @@ import { jsonError, jsonOk, requireRole } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { formatDateUK } from "@/lib/dates";
 import { cleanName } from "@/lib/names";
-import { canViewGoalScoreRow } from "@/lib/rbac";
+import { canViewGoalScoreRow, shouldShowOnGoalTracker, sortGoalTrackerRows } from "@/lib/rbac";
 import { UserRole } from "@prisma/client";
 import { ensureGoalWeekDates } from "@/services/goal-week";
 import { recalculateAllPoints, recalculatePointsForMonth } from "@/services/points";
@@ -70,14 +70,26 @@ export async function GET(req: NextRequest) {
       byStaff.get(s.staffName)![s.dayIndex] = s.points;
     });
 
-    const rows = [...byStaff.entries()]
-      .filter(([staffName]) => {
-        const key = cleanName(staffName);
-        const targetRole = roleByKey.get(key) ?? "member";
-        const isOwn = key === viewerKey;
-        return canViewGoalScoreRow(user.role, targetRole, isOwn);
-      })
-      .map(([staffName, points]) => ({ staffName, points, total: points.reduce((a, b) => a + b, 0) }));
+    const rows = sortGoalTrackerRows(
+      [...byStaff.entries()]
+        .filter(([staffName]) => {
+          const key = cleanName(staffName);
+          const targetRole = roleByKey.get(key) ?? "member";
+          const isOwn = key === viewerKey;
+          if (!shouldShowOnGoalTracker(targetRole)) return false;
+          return canViewGoalScoreRow(user.role, targetRole, isOwn);
+        })
+        .map(([staffName, points]) => {
+          const key = cleanName(staffName);
+          const role = roleByKey.get(key) ?? "member";
+          return {
+            staffName,
+            role,
+            points,
+            total: points.reduce((a, b) => a + b, 0)
+          };
+        })
+    );
 
     return jsonOk({ month, weekDates, scores: rows, kind });
   } catch (e) {

@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import type { UserRole } from "@prisma/client";
+import { GOAL_TRACKER_ROLE_GROUPS } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type MonthOption = {
@@ -9,6 +11,13 @@ type MonthOption = {
   slug: string;
   year: number | null;
   isActive: boolean;
+};
+
+type ScoreRow = {
+  staffName: string;
+  role: UserRole;
+  points: number[];
+  total: number;
 };
 
 function monthLabel(m: MonthOption): string {
@@ -26,7 +35,7 @@ export function GoalsClient({
 }) {
   const [data, setData] = useState<{
     weekDates: string[];
-    scores: Array<{ staffName: string; points: number[]; total: number }>;
+    scores: ScoreRow[];
     month?: { name: string; slug: string; isActive: boolean } | null;
   } | null>(null);
   const [months, setMonths] = useState<MonthOption[]>([]);
@@ -79,11 +88,20 @@ export function GoalsClient({
     }
   });
 
+  const groupedScores = useMemo(() => {
+    if (!data) return [];
+    return GOAL_TRACKER_ROLE_GROUPS.map(g => ({
+      label: g.label,
+      rows: data.scores.filter(s => s.role === g.role)
+    })).filter(g => g.rows.length > 0);
+  }, [data]);
+
   if (!data) return <p className="muted">Loading…</p>;
 
   const dayLabels = data.weekDates.length === 7
     ? data.weekDates
     : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const colCount = dayLabels.length + 2;
 
   return (
     <div>
@@ -106,7 +124,8 @@ export function GoalsClient({
         </div>
       )}
       <p className="muted">
-        Weekly Mon–Sun points. You see your row and everyone below your rank. Updates live.
+        Weekly Mon–Sun points. You see your row and everyone below your rank. Management accounts
+        are not listed. Updates live.
         {monthPicker && data.month && !data.month.isActive && (
           <> Viewing <strong>{data.month.name}</strong> (not the active month).</>
         )}
@@ -121,12 +140,19 @@ export function GoalsClient({
             </tr>
           </thead>
           <tbody>
-            {data.scores.map(s => (
-              <tr key={s.staffName}>
-                <td>{s.staffName}</td>
-                {s.points.map((p, i) => <td key={i}>{p}</td>)}
-                <td><strong>{s.total}</strong></td>
-              </tr>
+            {groupedScores.map(group => (
+              <Fragment key={group.label}>
+                <tr className="goal-group-heading">
+                  <td colSpan={colCount}>{group.label}</td>
+                </tr>
+                {group.rows.map(s => (
+                  <tr key={s.staffName}>
+                    <td>{s.staffName}</td>
+                    {s.points.map((p, i) => <td key={i}>{p}</td>)}
+                    <td><strong>{s.total}</strong></td>
+                  </tr>
+                ))}
+              </Fragment>
             ))}
           </tbody>
         </table>

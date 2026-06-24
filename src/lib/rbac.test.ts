@@ -7,7 +7,9 @@ import {
   canEditUsername,
   canHardDeleteMonth,
   canViewBackups,
-  canViewGoalScoreRow
+  canViewGoalScoreRow,
+  shouldShowOnGoalTracker,
+  sortGoalTrackerRows
 } from "@/lib/rbac";
 
 describe("canEditUserRole", () => {
@@ -107,6 +109,31 @@ describe("canViewBackups", () => {
     expect(canViewBackups("aux")).toBe(false);
     expect(canViewBackups("lead")).toBe(false);
     expect(canViewBackups("member")).toBe(false);
+  });
+});
+
+describe("shouldShowOnGoalTracker", () => {
+  it("excludes management", () => {
+    expect(shouldShowOnGoalTracker("management")).toBe(false);
+  });
+
+  it("includes other roles", () => {
+    expect(shouldShowOnGoalTracker("adm")).toBe(true);
+    expect(shouldShowOnGoalTracker("aux")).toBe(true);
+    expect(shouldShowOnGoalTracker("lead")).toBe(true);
+    expect(shouldShowOnGoalTracker("sub_lead")).toBe(true);
+    expect(shouldShowOnGoalTracker("member")).toBe(true);
+  });
+});
+
+describe("sortGoalTrackerRows", () => {
+  it("orders by role group then name", () => {
+    const sorted = sortGoalTrackerRows([
+      { staffName: "Zed", role: "member", points: [0, 0, 0, 0, 0, 0, 0], total: 0 },
+      { staffName: "Amy", role: "aux", points: [0, 0, 0, 0, 0, 0, 0], total: 0 },
+      { staffName: "Bob", role: "member", points: [0, 0, 0, 0, 0, 0, 0], total: 0 }
+    ]);
+    expect(sorted.map(r => r.staffName)).toEqual(["Amy", "Bob", "Zed"]);
   });
 });
 

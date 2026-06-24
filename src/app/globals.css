@@ -113,6 +113,14 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th, .table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
 .table th { color: var(--muted); font-weight: 600; }
+.goal-group-heading td {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 2px solid var(--border);
+  padding-top: 12px;
+}
 
 .badge {
   display: inline-block;
