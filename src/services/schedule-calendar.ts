@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { SCHEDULE } from "@/lib/config";
+import { SCHEDULE, scheduleTimeLabelForRow } from "@/lib/config";
 import {
   buildMonthScheduleCalendar,
   parseMonthLabel,
@@ -41,9 +41,14 @@ export async function seedScheduleSlotsForMonth(
             weekIndex: week.weekIndex,
             dayIndex: day.dayIndex,
             rowIndex,
+            timeText: scheduleTimeLabelForRow(rowIndex) || null,
             actionDayDate: day.date
           },
-          update: { actionDayDate: day.date, deletedAt: null }
+          update: {
+            actionDayDate: day.date,
+            deletedAt: null,
+            timeText: scheduleTimeLabelForRow(rowIndex) || null
+          }
         });
       }
     }

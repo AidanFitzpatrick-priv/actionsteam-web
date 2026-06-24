@@ -8,6 +8,26 @@ export const SCHEDULE = {
   DAYS_PER_WEEK: 7
 } as const;
 
+/** Schedule column times (row 0 → 13:00 … row 11 → 00:00). */
+export const SCHEDULE_TIME_LABELS = [
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+  "19:00",
+  "20:00",
+  "21:00",
+  "22:00",
+  "23:00",
+  "00:00"
+] as const;
+
+export function scheduleTimeLabelForRow(rowIndex: number): string {
+  return SCHEDULE_TIME_LABELS[rowIndex] ?? "";
+}
+
 export const GOAL = {
   SCORE_DAYS: 7 // Mon–Sun
 } as const;

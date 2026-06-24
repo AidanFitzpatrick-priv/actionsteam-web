@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateUKShort } from "@/lib/dates";
+import { scheduleTimeLabelForRow } from "@/lib/config";
 import { useLiveSync, useEditingIds, liveFetchOpts } from "@/hooks/useLiveSync";
 
 const DAY_NAMES_FULL = [
@@ -267,7 +268,7 @@ export function ScheduleClient({
   const timeColumnLabels = useMemo(() => {
     return activeRowIndices.map(rowIdx => {
       const withTime = weekSlots.find(s => s.rowIndex === rowIdx && s.timeText?.trim());
-      return withTime?.timeText?.trim() ?? "";
+      return withTime?.timeText?.trim() || scheduleTimeLabelForRow(rowIdx);
     });
   }, [weekSlots, activeRowIndices]);
 
@@ -332,7 +333,7 @@ export function ScheduleClient({
               <th className="schedule-day-col">Day</th>
               {timeColumnLabels.map((label, colIdx) => (
                 <th key={activeRowIndices[colIdx]} className="schedule-time-col">
-                  {label || "—"}
+                  {label}
                 </th>
               ))}
             </tr>
