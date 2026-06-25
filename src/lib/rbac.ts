@@ -109,6 +109,12 @@ export const GOAL_TRACKER_ROLE_GROUPS: { role: UserRole; label: string }[] = [
   { role: "member", label: "Member" }
 ];
 
+/** Admin → Users section order (top → bottom); includes management. */
+export const ADMIN_USER_ROLE_GROUPS: { role: UserRole; label: string }[] = [
+  { role: "management", label: "Management" },
+  ...GOAL_TRACKER_ROLE_GROUPS
+];
+
 export type GoalTrackerScoreRow = {
   staffName: string;
   role: UserRole;

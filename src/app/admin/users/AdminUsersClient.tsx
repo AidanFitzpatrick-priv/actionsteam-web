@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type { UserRole } from "@prisma/client";
-import { allowedRoleOptionsForActor, canDeleteUser, canEditUserRole, canEditUsername, canManageGoalTrackerVisibility, formatRole } from "@/lib/rbac";
+import {
+  ADMIN_USER_ROLE_GROUPS,
+  allowedRoleOptionsForActor,
+  canDeleteUser,
+  canEditUserRole,
+  canEditUsername,
+  canManageGoalTrackerVisibility,
+  formatRole
+} from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type UserRow = {
@@ -114,6 +122,106 @@ export function AdminUsersClient({
     await patch(userId, { discordId: raw || null });
   }
 
+  const groupedUsers = useMemo(() => {
+    return ADMIN_USER_ROLE_GROUPS.map(g => ({
+      label: g.label,
+      users: users
+        .filter(u => u.role === g.role)
+        .sort((a, b) => a.username.localeCompare(b.username, undefined, { sensitivity: "base" }))
+    })).filter(g => g.users.length > 0);
+  }, [users]);
+
+  const colCount = canManageGoalVisibility ? 7 : 6;
+
+  function renderUserRow(u: UserRow) {
+    const canEditRole = canEditUserRole(viewerRole, u.role);
+    const canRemove = u.id !== viewerUserId && canDeleteUser(viewerRole, u.role);
+    const roleOptions = canEditRole
+      ? assignableRoles.includes(u.role)
+        ? assignableRoles
+        : [u.role, ...assignableRoles.filter(r => r !== u.role)]
+      : [];
+
+    return (
+      <tr key={u.id}>
+        <td>
+          {canEditNames ? (
+            <input
+              className="input"
+              style={{ maxWidth: 140, padding: "4px 8px", fontSize: 13 }}
+              value={usernameDraft[u.id] ?? ""}
+              placeholder="Username"
+              onChange={e => setUsernameDraft(d => ({ ...d, [u.id]: e.target.value }))}
+              onBlur={() => saveUsername(u.id)}
+            />
+          ) : (
+            u.username
+          )}
+        </td>
+        <td>{u.email}</td>
+        <td>
+          <input
+            className="input"
+            style={{ maxWidth: 140, padding: "4px 8px", fontSize: 13 }}
+            value={cityDraft[u.id] ?? ""}
+            placeholder="City ID"
+            onChange={e => setCityDraft(d => ({ ...d, [u.id]: e.target.value }))}
+            onBlur={() => saveCityId(u.id)}
+          />
+        </td>
+        <td>
+          <input
+            className="input"
+            style={{ maxWidth: 180, padding: "4px 8px", fontSize: 13 }}
+            value={discordDraft[u.id] ?? ""}
+            placeholder="17–20 digits"
+            onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
+            onBlur={() => saveDiscord(u.id)}
+          />
+        </td>
+        <td>
+          {canEditRole ? (
+            <select
+              className="select"
+              value={u.role}
+              onChange={e => patch(u.id, { role: e.target.value as UserRole })}
+            >
+              {roleOptions.map(r => (
+                <option key={r} value={r}>{formatRole(r)}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="muted">{formatRole(u.role)}</span>
+          )}
+        </td>
+        {canManageGoalVisibility && (
+          <td>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={Boolean(u.hiddenFromGoalTrackers)}
+                onChange={e => patch(u.id, { hiddenFromGoalTrackers: e.target.checked })}
+              />
+              Hide from goals
+            </label>
+            {u.hiddenFromGoalTrackers && (
+              <span className="badge" style={{ marginTop: 4, display: "inline-block" }}>
+                Hidden from goals
+              </span>
+            )}
+          </td>
+        )}
+        <td>
+          {canRemove && (
+            <button type="button" className="btn btn-danger" onClick={() => removeUser(u)}>
+              Delete
+            </button>
+          )}
+        </td>
+      </tr>
+    );
+  }
+
   return (
     <div className="card">
       <table className="table">
@@ -129,96 +237,14 @@ export function AdminUsersClient({
           </tr>
         </thead>
         <tbody>
-          {users.map(u => {
-            const canEditRole = canEditUserRole(viewerRole, u.role);
-            const canRemove = u.id !== viewerUserId && canDeleteUser(viewerRole, u.role);
-            const roleOptions = canEditRole
-              ? assignableRoles.includes(u.role)
-                ? assignableRoles
-                : [u.role, ...assignableRoles.filter(r => r !== u.role)]
-              : [];
-
-            return (
-              <tr key={u.id}>
-                <td>
-                  {canEditNames ? (
-                    <input
-                      className="input"
-                      style={{ maxWidth: 140, padding: "4px 8px", fontSize: 13 }}
-                      value={usernameDraft[u.id] ?? ""}
-                      placeholder="Username"
-                      onChange={e => setUsernameDraft(d => ({ ...d, [u.id]: e.target.value }))}
-                      onBlur={() => saveUsername(u.id)}
-                    />
-                  ) : (
-                    u.username
-                  )}
-                </td>
-                <td>{u.email}</td>
-                <td>
-                  <input
-                    className="input"
-                    style={{ maxWidth: 140, padding: "4px 8px", fontSize: 13 }}
-                    value={cityDraft[u.id] ?? ""}
-                    placeholder="City ID"
-                    onChange={e => setCityDraft(d => ({ ...d, [u.id]: e.target.value }))}
-                    onBlur={() => saveCityId(u.id)}
-                  />
-                </td>
-                <td>
-                  <input
-                    className="input"
-                    style={{ maxWidth: 180, padding: "4px 8px", fontSize: 13 }}
-                    value={discordDraft[u.id] ?? ""}
-                    placeholder="17–20 digits"
-                    onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
-                    onBlur={() => saveDiscord(u.id)}
-                  />
-                </td>
-                <td>
-                  {canEditRole ? (
-                    <select
-                      className="select"
-                      value={u.role}
-                      onChange={e => patch(u.id, { role: e.target.value as UserRole })}
-                    >
-                      {roleOptions.map(r => (
-                        <option key={r} value={r}>{formatRole(r)}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="muted">{formatRole(u.role)}</span>
-                  )}
-                </td>
-                {canManageGoalVisibility && (
-                  <td>
-                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(u.hiddenFromGoalTrackers)}
-                        onChange={e =>
-                          patch(u.id, { hiddenFromGoalTrackers: e.target.checked })
-                        }
-                      />
-                      Hide from goals
-                    </label>
-                    {u.hiddenFromGoalTrackers && (
-                      <span className="badge" style={{ marginTop: 4, display: "inline-block" }}>
-                        Hidden from goals
-                      </span>
-                    )}
-                  </td>
-                )}
-                <td>
-                  {canRemove && (
-                    <button type="button" className="btn btn-danger" onClick={() => removeUser(u)}>
-                      Delete
-                    </button>
-                  )}
-                </td>
+          {groupedUsers.map(group => (
+            <Fragment key={group.label}>
+              <tr className="goal-group-heading">
+                <td colSpan={colCount}>{group.label}</td>
               </tr>
-            );
-          })}
+              {group.users.map(renderUserRow)}
+            </Fragment>
+          ))}
         </tbody>
       </table>
     </div>
