@@ -14,6 +14,7 @@ type Row = {
   hostedBy: string | null;
   attended: string[];
   idsText: string | null;
+  winnerComped: boolean;
   actionWinner: string | null;
   org1Attended: string | null;
   org2Attended: string | null;
@@ -402,13 +403,14 @@ export function TrackerClient({
               <th className="tracker-col-count">ORG 1 #</th>
               <th className="tracker-col-count">ORG 2 #</th>
               <th className="tracker-col-ids">ID&apos;s</th>
+              <th className="tracker-col-comped">Winner comped</th>
               <th className="tracker-col-actions" aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={11} className="tracker-empty-hint muted">
+                <td colSpan={12} className="tracker-empty-hint muted">
                   No rows yet — press Add row to log an action.
                 </td>
               </tr>
@@ -571,6 +573,19 @@ export function TrackerClient({
                           markDoneEditing(row.id);
                         }}
                       />
+                    </td>
+                    <td className="tracker-col-comped">
+                      <label className="tracker-comped-toggle">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(row.winnerComped)}
+                          aria-label="Winner comped"
+                          onChange={e => updateRow(row.id, { winnerComped: e.target.checked })}
+                        />
+                        <span className="tracker-comped-label">
+                          {row.winnerComped ? "Comped" : "—"}
+                        </span>
+                      </label>
                     </td>
                     <td className="tracker-col-actions">
                       <button

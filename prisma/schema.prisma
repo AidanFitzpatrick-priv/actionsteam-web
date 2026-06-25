@@ -202,6 +202,7 @@ model TrackerRow {
   hostedBy        String?   @map("hosted_by")
   attended        String[]  @default([])
   idsText         String?   @map("ids_text")
+  winnerComped    Boolean   @default(false) @map("winner_comped")
   actionWinner    String?   @map("action_winner")
   org1Attended    String?   @map("org1_attended")
   org2Attended    String?   @map("org2_attended")

@@ -62,6 +62,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         hostedBy: z.string().nullable().optional(),
         attended: z.array(z.string()).optional(),
         idsText: z.string().max(500).nullable().optional(),
+        winnerComped: z.boolean().optional(),
         actionWinner: z.string().nullable().optional(),
         org1Attended: z.string().nullable().optional(),
         org2Attended: z.string().nullable().optional()
@@ -111,6 +112,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       hostedBy: body.hostedBy,
       attended: body.attended,
       idsText: body.idsText,
+      winnerComped: body.winnerComped,
       actionWinner: body.actionWinner,
       org1Attended: body.org1Attended,
       org2Attended: body.org2Attended

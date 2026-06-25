@@ -21,6 +21,7 @@ export async function patchTrackerRow(
     hostedBy: string | null;
     attended: string[];
     idsText: string | null;
+    winnerComped: boolean;
     actionWinner: string | null;
     org1Attended: string | null;
     org2Attended: string | null;
