@@ -17,7 +17,7 @@ export default async function AdminAuditPage() {
   return (
     <div className="container-wide">
       <h1>Audit log</h1>
-      <p className="muted">Last 50 events (Phase B expands filtering).</p>
+      <p className="muted">Last 50 events.</p>
       <div className="card" style={{ marginTop: 16, overflowX: "auto" }}>
         <table className="table">
           <thead>
