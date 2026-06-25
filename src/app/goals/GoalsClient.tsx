@@ -125,8 +125,7 @@ export function GoalsClient({
         </div>
       )}
       <p className="muted">
-        Weekly Mon–Sun points. You see your row and everyone below your rank. Management accounts
-        are not listed. Updates live.
+        Weekly Mon–Sun points. You see your row and everyone below your rank. Updates live.
         {monthPicker && data.month && !data.month.isActive && (
           <> Viewing <strong>{data.month.name}</strong> (not the active month).</>
         )}

@@ -43,7 +43,7 @@ export async function Nav() {
             {isFullAdmin(user.role) && (
               <>
                 <Link href="/admin/months">Months</Link>
-                <Link href="/admin/data">Data</Link>
+                <Link href="/admin/data">Action types</Link>
                 <Link href="/admin/users">Users</Link>
                 <Link href="/admin/tools">Tools</Link>
                 <Link href="/admin/audit">Audit</Link>

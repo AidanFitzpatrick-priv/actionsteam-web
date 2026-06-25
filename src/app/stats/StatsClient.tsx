@@ -42,7 +42,7 @@ export function StatsClient() {
       <div className="grid-2" style={{ marginTop: 24 }}>
         {keys.map(key => {
           const t = tables[key];
-          if (!t) return null;
+          if (!t || t.rows.length === 0) return null;
           return (
             <div className="card" key={key}>
               <table className="table">
