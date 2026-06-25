@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateUKShort } from "@/lib/dates";
-import { scheduleTimeLabelForRow } from "@/lib/config";
+import { SCHEDULE, scheduleTimeLabelForRow } from "@/lib/config";
 import { useLiveSync, useEditingIds, liveFetchOpts } from "@/hooks/useLiveSync";
 
 const DAY_NAMES_FULL = [
@@ -256,21 +256,17 @@ export function ScheduleClient({
     return calendar?.weeks.find(w => w.weekIndex === week)?.days ?? [];
   }, [calendar, week]);
 
-  const activeRowIndices = useMemo(() => {
-    const indices = new Set<number>();
-    weekSlots.forEach(s => {
-      if (s.timeText?.trim() || slotIsFilled(s)) indices.add(s.rowIndex);
-    });
-    if (indices.size === 0) return Array.from({ length: 12 }, (_, i) => i);
-    return Array.from(indices).sort((a, b) => a - b);
-  }, [weekSlots]);
+  const rowIndices = useMemo(
+    () => Array.from({ length: SCHEDULE.DATA_ROWS }, (_, i) => i),
+    []
+  );
 
   const timeColumnLabels = useMemo(() => {
-    return activeRowIndices.map(rowIdx => {
+    return rowIndices.map(rowIdx => {
       const withTime = weekSlots.find(s => s.rowIndex === rowIdx && s.timeText?.trim());
       return withTime?.timeText?.trim() || scheduleTimeLabelForRow(rowIdx);
     });
-  }, [weekSlots, activeRowIndices]);
+  }, [weekSlots, rowIndices]);
 
   const bookedByOptions = useMemo(
     () => dropdowns?.accountUsers ?? [],
@@ -332,7 +328,7 @@ export function ScheduleClient({
             <tr>
               <th className="schedule-day-col">Day</th>
               {timeColumnLabels.map((label, colIdx) => (
-                <th key={activeRowIndices[colIdx]} className="schedule-time-col">
+                <th key={rowIndices[colIdx]} className="schedule-time-col">
                   {label}
                 </th>
               ))}
@@ -351,7 +347,7 @@ export function ScheduleClient({
                     <span className="schedule-day-name">{DAY_NAMES_FULL[day.dayIndex]}</span>
                     <span className="schedule-day-date">{actionDate}</span>
                   </th>
-                  {activeRowIndices.map(rowIdx => {
+                  {rowIndices.map(rowIdx => {
                     const slot = daySlots.find(s => s.rowIndex === rowIdx);
                     if (!slot) return <td key={rowIdx} className="schedule-slot-cell is-empty" />;
                     return (
