@@ -1,5 +1,5 @@
 /**
- * Port of Points.js + GoalTrackers.js — weekly Mon–Sun action & booking points.
+ * Port of Points.js + GoalTrackers.js — weekly Mon–Sun action points.
  */
 import { prisma } from "@/lib/db";
 import { isSameYMD } from "@/lib/dates";
@@ -84,29 +84,15 @@ export function accumulateActionPointsFromTracker(
   }
 }
 
-/** calculateBookingPoints schedule half */
-export function accumulateBookingPointsFromSlots(
-  slots: Array<{ dateBooked: Date | null; bookedBy: string | null }>,
-  scores: ScoreMap,
-  targetDates: (Date | null)[]
-) {
-  for (const slot of slots) {
-    if (!slot.bookedBy || !slot.dateBooked) continue;
-    const idx = targetDates.findIndex(t => t && isSameYMD(slot.dateBooked, t));
-    if (idx !== -1) addPoints(scores, slot.bookedBy, idx, 1);
-  }
-}
-
 export async function recalculatePointsForMonth(monthId: string) {
   const month = await prisma.month.findUnique({ where: { id: monthId } });
   if (!month || month.archivedAt) {
-    return { actionScores: {}, bookingScores: {}, weekDates: Array(7).fill(null) };
+    return { actionScores: {}, weekDates: Array(7).fill(null) };
   }
 
   const displayByKey = await buildScoreParticipants();
   const keys = [...displayByKey.keys()];
   const actionScores = initScores(keys);
-  const bookingScores = initScores(keys);
 
   const weekDates = await ensureGoalWeekDates(month);
 
@@ -122,19 +108,11 @@ export async function recalculatePointsForMonth(monthId: string) {
 
   accumulateActionPointsFromTracker(trackerRows, actionScores, weekDates);
 
-  const scheduleSlots = await prisma.scheduleSlot.findMany({
-    where: { monthId: month.id, deletedAt: null },
-    select: { dateBooked: true, bookedBy: true }
-  });
-  accumulateBookingPointsFromSlots(scheduleSlots, bookingScores, weekDates);
-
   await persistGoalScores(month.id, "actions", actionScores, displayByKey);
-  await persistGoalScores(month.id, "bookings", bookingScores, displayByKey);
-
   await pruneOrphanedGoalScores(month.id, "actions", displayByKey);
-  await pruneOrphanedGoalScores(month.id, "bookings", displayByKey);
+  await prisma.goalScore.deleteMany({ where: { monthId: month.id, kind: "bookings" } });
 
-  return { actionScores, bookingScores, weekDates };
+  return { actionScores, weekDates };
 }
 
 export async function recalculateAllPoints() {
@@ -142,7 +120,7 @@ export async function recalculateAllPoints() {
     where: { isActive: true, archivedAt: null }
   });
   if (!activeMonth) {
-    return { actionScores: {}, bookingScores: {}, weekDates: Array(7).fill(null) };
+    return { actionScores: {}, weekDates: Array(7).fill(null) };
   }
 
   return recalculatePointsForMonth(activeMonth.id);

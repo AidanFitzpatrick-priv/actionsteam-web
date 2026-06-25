@@ -7,7 +7,7 @@ export default async function ActionGoalsPage() {
   if (!user) redirect("/login");
   return (
     <div className="container-wide">
-      <GoalsClient kind="actions" />
+      <GoalsClient />
     </div>
   );
 }

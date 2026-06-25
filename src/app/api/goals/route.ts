@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { jsonError, jsonOk, requireRole } from "@/lib/api";
+import { jsonError, jsonOk, requireRole, ApiError } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { formatDateUK } from "@/lib/dates";
 import { cleanName } from "@/lib/names";
@@ -11,7 +11,9 @@ import { recalculateAllPoints, recalculatePointsForMonth } from "@/services/poin
 export async function GET(req: NextRequest) {
   try {
     const user = await requireRole("member");
-    const kind = req.nextUrl.searchParams.get("kind") ?? "actions";
+    const kindParam = req.nextUrl.searchParams.get("kind") ?? "actions";
+    if (kindParam !== "actions") throw new ApiError(404, "Not found");
+    const kind = "actions";
     const monthSlug = req.nextUrl.searchParams.get("month");
 
     let month = monthSlug
@@ -28,7 +30,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (scores.length === 0) {
-      if (monthSlug || kind === "bookings") {
+      if (monthSlug) {
         await recalculatePointsForMonth(month.id);
       } else {
         await recalculateAllPoints();

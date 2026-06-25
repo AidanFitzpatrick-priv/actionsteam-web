@@ -27,13 +27,7 @@ function monthLabel(m: MonthOption): string {
   return `${m.name}${year}${active}`;
 }
 
-export function GoalsClient({
-  kind,
-  monthPicker = false
-}: {
-  kind: "actions" | "bookings";
-  monthPicker?: boolean;
-}) {
+export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) {
   const [data, setData] = useState<{
     weekDates: string[];
     scores: ScoreRow[];
@@ -58,7 +52,7 @@ export function GoalsClient({
   }, [monthPicker]);
 
   const load = useCallback(async () => {
-    const params = new URLSearchParams({ kind });
+    const params = new URLSearchParams({ kind: "actions" });
     if (monthPicker && selectedSlug) params.set("month", selectedSlug);
     const res = await fetch(`/api/goals?${params}`);
     const json = await res.json();
@@ -68,7 +62,7 @@ export function GoalsClient({
         setSelectedSlug(json.month.slug);
       }
     }
-  }, [kind, monthPicker, selectedSlug]);
+  }, [monthPicker, selectedSlug]);
 
   useEffect(() => {
     if (monthPicker && !selectedSlug) return;
@@ -106,7 +100,7 @@ export function GoalsClient({
 
   return (
     <div>
-      <h1>{kind === "actions" ? "Action" : "Booking"} goal scores</h1>
+      <h1>Action goal scores</h1>
       {monthPicker && months.length > 0 && (
         <div className="field" style={{ maxWidth: 280, marginTop: 12 }}>
           <label htmlFor="goals-month">Month</label>

@@ -43,7 +43,6 @@ export default async function HomePage() {
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             <li><Link href="/stats">Action Stats</Link></li>
             <li><Link href="/goals/actions">Action goal scores</Link></li>
-            <li><Link href="/goals/bookings">Booking goal scores</Link></li>
             {canCreateInvites(user.role) && <li><Link href="/admin/invites">Invite members</Link></li>}
           </ul>
         </div>
