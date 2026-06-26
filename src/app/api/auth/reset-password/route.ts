@@ -5,26 +5,52 @@ import { hashPassword } from "@/lib/crypto";
 import { writeAuditLog } from "@/lib/audit";
 import { passwordSchema } from "@/lib/user-fields";
 import { prisma } from "@/lib/db";
+import {
+  completePasswordResetWithToken,
+  validatePasswordResetToken
+} from "@/services/password-reset";
+
+const bodySchema = z
+  .object({
+    token: z.string().optional(),
+    password: passwordSchema,
+    passwordConfirm: z.string()
+  })
+  .refine(data => data.password === data.passwordConfirm, {
+    message: "Passwords do not match",
+    path: ["passwordConfirm"]
+  });
+
+export async function GET(req: NextRequest) {
+  try {
+    const token = req.nextUrl.searchParams.get("token");
+    if (!token) return jsonOk({ valid: false });
+    const result = await validatePasswordResetToken(token);
+    return jsonOk(result);
+  } catch (e) {
+    return jsonError(e);
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
+    const body = bodySchema.parse(await req.json());
+    const meta = getMeta(req);
+
+    if (body.token) {
+      await completePasswordResetWithToken({
+        rawToken: body.token,
+        password: body.password,
+        ipAddress: meta.ipAddress
+      });
+      return jsonOk({ ok: true });
+    }
+
     const user = await requireUser();
     if (!user.mustResetPassword) {
       return jsonOk({ ok: true, alreadySet: true });
     }
 
-    const body = z
-      .object({
-        password: passwordSchema,
-        passwordConfirm: z.string()
-      })
-      .refine(data => data.password === data.passwordConfirm, {
-        message: "Passwords do not match",
-        path: ["passwordConfirm"]
-      })
-      .parse(await req.json());
-
-    const meta = getMeta(req);
     const passwordHash = await hashPassword(body.password);
 
     await prisma.user.update({
@@ -37,6 +63,7 @@ export async function POST(req: NextRequest) {
       action: "auth.password_reset",
       entityType: "user",
       entityId: user.id,
+      payload: { via: "admin_required" },
       ipAddress: meta.ipAddress
     });
 

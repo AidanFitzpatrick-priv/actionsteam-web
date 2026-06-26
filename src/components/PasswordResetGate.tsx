@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-const OPEN_PATHS = new Set(["/login", "/signup", "/reset-password"]);
+const OPEN_PATHS = new Set(["/login", "/signup", "/forgot-password", "/reset-password"]);
 
 export function PasswordResetGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -44,6 +45,9 @@ export default function LoginPage() {
           <button type="submit" className="btn" style={{ width: "100%" }}>Log in</button>
         </form>
         <p className="muted" style={{ marginTop: 16 }}>
+          <Link href="/forgot-password">Forgot password?</Link>
+        </p>
+        <p className="muted" style={{ marginTop: 8 }}>
           Need an account? Ask a Sub Lead or above for an invite link.
         </p>
       </div>

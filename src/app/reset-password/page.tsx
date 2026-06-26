@@ -1,16 +1,30 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const token = params.get("token") ?? "";
+  const isEmailReset = Boolean(token);
+
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
 
   useEffect(() => {
+    if (isEmailReset) {
+      fetch(`/api/auth/reset-password?token=${encodeURIComponent(token)}`)
+        .then(r => r.json())
+        .then(data => setTokenValid(Boolean(data.valid)))
+        .finally(() => setLoading(false));
+      return;
+    }
+
     fetch("/api/auth/me")
       .then(r => r.json())
       .then(data => {
@@ -23,7 +37,7 @@ export default function ResetPasswordPage() {
         }
       })
       .finally(() => setLoading(false));
-  }, [router]);
+  }, [isEmailReset, token, router]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -31,24 +45,46 @@ export default function ResetPasswordPage() {
     const res = await fetch("/api/auth/reset-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password, passwordConfirm })
+      body: JSON.stringify({
+        ...(isEmailReset ? { token } : {}),
+        password,
+        passwordConfirm
+      })
     });
     const data = await res.json();
     if (!res.ok) {
       setError(data.error ?? "Could not update password");
       return;
     }
-    router.push("/");
+    router.push(isEmailReset ? "/login" : "/");
     router.refresh();
   }
 
   if (loading) return <p className="muted container">Loading…</p>;
 
+  if (isEmailReset && !tokenValid) {
+    return (
+      <div className="container" style={{ maxWidth: 420 }}>
+        <div className="card">
+          <h1>Reset link expired</h1>
+          <p className="muted">This password reset link is invalid or has expired.</p>
+          <p style={{ marginTop: 16 }}>
+            <Link href="/forgot-password">Request a new link</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container" style={{ maxWidth: 420 }}>
       <div className="card">
         <h1>Set a new password</h1>
-        <p className="muted">Your account requires a new password before you can continue.</p>
+        <p className="muted">
+          {isEmailReset
+            ? "Choose a new password for your account."
+            : "Your account requires a new password before you can continue."}
+        </p>
         <form onSubmit={onSubmit}>
           <div className="field">
             <label htmlFor="password">New password</label>
@@ -81,7 +117,20 @@ export default function ResetPasswordPage() {
             Save password
           </button>
         </form>
+        {isEmailReset && (
+          <p className="muted" style={{ marginTop: 16 }}>
+            <Link href="/login">Back to log in</Link>
+          </p>
+        )}
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<p className="muted container">Loading…</p>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
