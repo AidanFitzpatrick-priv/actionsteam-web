@@ -3,17 +3,14 @@ import { z } from "zod";
 import { jsonError, jsonOk, requireRole, getMeta, ApiError } from "@/lib/api";
 import { getMonthBySlug } from "@/services/months";
 import {
-  getTrackerRows,
-  patchTrackerRow,
-  addTrackerRow,
-  softDeleteTrackerRow,
-  loadStatsForMonth
-} from "@/services/tracker";
-import { buildAllStatsTables } from "@/services/stats";
-import { recalculateAllPoints } from "@/services/points";
+  getBrTrackerRows,
+  patchBrTrackerRow,
+  addBrTrackerRow,
+  softDeleteBrTrackerRow
+} from "@/services/br-tracker";
 import { parseDate } from "@/lib/dates";
 import { writeAuditLog } from "@/lib/audit";
-import { publishMonthTrackerChange, publishTrackerDerivedUpdates } from "@/services/live-sync";
+import { publishMonthBrTrackerChange } from "@/services/live-sync";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
@@ -24,11 +21,12 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const month = await getMonthBySlug(slug);
     if (!month || month.archivedAt) throw new ApiError(404, "Month not found");
 
-    const rows = await getTrackerRows(month.id);
-    const { getDropdownOptions } = await import("@/services/reference-data");
+    const rows = await getBrTrackerRows(month.id);
+    const { getDropdownOptions, ensureBrActionTypes } = await import("@/services/reference-data");
     const { getTypeColorMap, colorForType } = await import("@/services/schedule");
+    await ensureBrActionTypes();
     const [dropdowns, colorMap] = await Promise.all([
-      getDropdownOptions({ typeKind: "action" }),
+      getDropdownOptions({ typeKind: "br" }),
       getTypeColorMap()
     ]);
 
@@ -60,21 +58,17 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         actionDate: z.string().nullable().optional(),
         typeName: z.string().nullable().optional(),
         status: z.array(z.string()).optional(),
-        org1Name: z.string().nullable().optional(),
-        org2Name: z.string().nullable().optional(),
-        hostedBy: z.string().nullable().optional(),
         attended: z.array(z.string()).optional(),
-        idsText: z.string().max(500).nullable().optional(),
-        winnerComped: z.boolean().optional(),
-        actionWinner: z.string().nullable().optional(),
-        org1Attended: z.string().nullable().optional(),
-        org2Attended: z.string().nullable().optional()
+        firstPlace: z.string().max(500).nullable().optional(),
+        secondPlace: z.string().max(500).nullable().optional(),
+        thirdPlace: z.string().max(500).nullable().optional(),
+        winnerComped: z.boolean().optional()
       })
       .parse(await req.json());
 
     if (body.action === "add") {
-      const row = await addTrackerRow(month.id);
-      await publishMonthTrackerChange({
+      const row = await addBrTrackerRow(month.id);
+      await publishMonthBrTrackerChange({
         monthId: month.id,
         monthSlug: slug,
         actorId: user.id,
@@ -86,61 +80,42 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     if (body.action === "delete") {
       if (!body.rowId) throw new ApiError(400, "rowId required");
-      await softDeleteTrackerRow(body.rowId);
-      await publishMonthTrackerChange({
+      await softDeleteBrTrackerRow(body.rowId);
+      await publishMonthBrTrackerChange({
         monthId: month.id,
         monthSlug: slug,
         actorId: user.id,
         action: "deleted",
         rowId: body.rowId
       });
-      void recalculateAllPoints().then(() =>
-        publishTrackerDerivedUpdates({
-          monthId: month.id,
-          monthSlug: slug,
-          actorId: user.id
-        })
-      );
       return jsonOk({ ok: true });
     }
 
     if (!body.rowId) throw new ApiError(400, "rowId required");
 
-    const row = await patchTrackerRow(body.rowId, {
+    const row = await patchBrTrackerRow(body.rowId, {
       actionDate: body.actionDate !== undefined ? parseDate(body.actionDate) : undefined,
       typeName: body.typeName,
       status: body.status,
-      org1Name: body.org1Name,
-      org2Name: body.org2Name,
-      hostedBy: body.hostedBy,
       attended: body.attended,
-      idsText: body.idsText,
-      winnerComped: body.winnerComped,
-      actionWinner: body.actionWinner,
-      org1Attended: body.org1Attended,
-      org2Attended: body.org2Attended
+      firstPlace: body.firstPlace,
+      secondPlace: body.secondPlace,
+      thirdPlace: body.thirdPlace,
+      winnerComped: body.winnerComped
     });
 
     const { getTypeColorMap, colorForType } = await import("@/services/schedule");
     const colorMap = await getTypeColorMap();
 
-    let toast: string | undefined;
-    if (body.actionWinner?.trim().toLowerCase() === "n/a") {
-      toast = "Headcount set to N/A";
-    }
-
     await writeAuditLog({
       userId: user.id,
-      action: "tracker.update",
-      entityType: "tracker_row",
+      action: "br_tracker.update",
+      entityType: "br_tracker_row",
       entityId: row.id,
       ipAddress: meta.ipAddress
     });
 
-    const statsRows = await loadStatsForMonth(month.id);
-    const stats = buildAllStatsTables(statsRows, statsRows);
-
-    await publishMonthTrackerChange({
+    await publishMonthBrTrackerChange({
       monthId: month.id,
       monthSlug: slug,
       actorId: user.id,
@@ -148,15 +123,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       rowId: row.id
     });
 
-    void recalculateAllPoints().then(() =>
-      publishTrackerDerivedUpdates({
-        monthId: month.id,
-        monthSlug: slug,
-        actorId: user.id
-      })
-    );
-
-    return jsonOk({ row: { ...row, colour: colorForType(row.typeName, colorMap) }, toast, stats });
+    return jsonOk({ row: { ...row, colour: colorForType(row.typeName, colorMap) } });
   } catch (e) {
     return jsonError(e);
   }

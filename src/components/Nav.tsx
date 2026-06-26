@@ -34,6 +34,7 @@ export async function Nav() {
               <>
                 <Link href={`/months/${activeMonth.slug}/schedule`}>Schedule</Link>
                 <Link href={`/months/${activeMonth.slug}/tracker`}>Tracker</Link>
+                <Link href={`/months/${activeMonth.slug}/br-tracker`}>BR Tracker</Link>
               </>
             )}
             <Link href="/stats">Stats</Link>

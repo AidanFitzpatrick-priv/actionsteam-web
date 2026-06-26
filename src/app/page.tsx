@@ -31,6 +31,8 @@ export default async function HomePage() {
                 <Link href={`/months/${activeMonth.slug}/schedule`}>Open schedule</Link>
                 {" · "}
                 <Link href={`/months/${activeMonth.slug}/tracker`}>Open tracker</Link>
+                {" · "}
+                <Link href={`/months/${activeMonth.slug}/br-tracker`}>Open BR tracker</Link>
               </p>
             </>
           ) : (

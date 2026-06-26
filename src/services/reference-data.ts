@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { ActionTypeKind, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
 import { shouldShowOnGoalTracker } from "@/lib/rbac";
@@ -60,23 +60,44 @@ export async function softDeleteStaff(params: {
   return row;
 }
 
-export async function listActionTypes() {
+export async function listActionTypes(kind?: ActionTypeKind) {
   return prisma.actionType.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, ...(kind ? { kind } : {}) },
     orderBy: { name: "asc" }
   });
+}
+
+export const BR_ACTION_TYPE_NAMES = ["City BR", "Cayo BR", "Sandy BR"] as const;
+
+const BR_TYPE_SEEDS: { name: string; colourHex: string }[] = [
+  { name: "City BR", colourHex: "#d9d2e9" },
+  { name: "Cayo BR", colourHex: "#cfe2f3" },
+  { name: "Sandy BR", colourHex: "#fce5cd" }
+];
+
+/** Ensure BR action types exist and are tagged kind=br. */
+export async function ensureBrActionTypes() {
+  for (const t of BR_TYPE_SEEDS) {
+    await prisma.actionType.upsert({
+      where: { name: t.name },
+      create: { name: t.name, colourHex: t.colourHex, kind: "br" },
+      update: { kind: "br", colourHex: t.colourHex, deletedAt: null }
+    });
+  }
 }
 
 export async function upsertActionType(params: {
   id?: string;
   name: string;
   colourHex: string;
+  kind?: ActionTypeKind;
   actorUserId: string;
   ipAddress?: string | null;
 }) {
   const data = {
     name: params.name.trim(),
-    colourHex: params.colourHex.trim()
+    colourHex: params.colourHex.trim(),
+    kind: params.kind ?? "action"
   };
 
   const row = params.id
@@ -170,11 +191,26 @@ export async function softDeleteGang(params: {
   return row;
 }
 
+/** Status dropdown options for tracker surfaces. */
+export function statusOptionsForTypeKind(typeKind?: ActionTypeKind): string[] {
+  return typeKind === "br"
+    ? ["Completed", "Actions Didn't Attend"]
+    : [
+        "Completed",
+        "Actions Didn't Attend",
+        "Org 1 Didn't Attend",
+        "Org 2 Didn't Attend",
+        "Gang Didn't Attend",
+        "PD Didn't Attend"
+      ];
+}
+
 /** Dropdown options for tracker/schedule — PD first in org2 list. */
-export async function getDropdownOptions() {
+export async function getDropdownOptions(opts?: { typeKind?: ActionTypeKind }) {
+  const typeKind = opts?.typeKind;
   const [staff, types, gangs, accountUsers] = await Promise.all([
     listStaff(),
-    listActionTypes(),
+    listActionTypes(typeKind),
     listGangs(),
     prisma.user.findMany({
       where: { disabledAt: null },
@@ -191,16 +227,9 @@ export async function getDropdownOptions() {
     accountUsers: accountUsers
       .filter(u => shouldShowOnGoalTracker(u.role as UserRole, u.hiddenFromGoalTrackers))
       .map(u => u.username),
-    types: types.map(t => ({ name: t.name, colourHex: t.colourHex })),
+    types: types.map(t => ({ name: t.name, colourHex: t.colourHex, kind: t.kind })),
     org1: org1Names,
     org2: org2Names,
-    statusOptions: [
-      "Completed",
-      "Actions Didn't Attend",
-      "Org 1 Didn't Attend",
-      "Org 2 Didn't Attend",
-      "Gang Didn't Attend",
-      "PD Didn't Attend"
-    ]
+    statusOptions: statusOptionsForTypeKind(typeKind)
   };
 }

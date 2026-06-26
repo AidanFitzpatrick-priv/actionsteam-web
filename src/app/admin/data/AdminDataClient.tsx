@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type Tab = "types" | "gangs" | "staff";
+type ActionTypeKind = "action" | "br";
 
 const TAB_LABELS: Record<Tab, string> = {
   types: "Action types",
@@ -16,6 +17,7 @@ export function AdminDataClient() {
   const [items, setItems] = useState<Array<Record<string, unknown>>>([]);
   const [name, setName] = useState("");
   const [extra, setExtra] = useState("");
+  const [typeKind, setTypeKind] = useState<ActionTypeKind>("action");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -29,6 +31,7 @@ export function AdminDataClient() {
     setEditingId(null);
     setName("");
     setExtra("");
+    setTypeKind("action");
   }, [load, tab]);
 
   useLiveSync({
@@ -42,14 +45,17 @@ export function AdminDataClient() {
     setEditingId(String(item.id));
     setName(String(item.name));
     if (tab === "staff") setExtra(String(item.rank ?? ""));
-    else if (tab === "types") setExtra(String(item.colourHex ?? "#ffffff"));
-    else setExtra(item.org2Eligible ? "true" : "false");
+    else if (tab === "types") {
+      setExtra(String(item.colourHex ?? "#ffffff"));
+      setTypeKind((item.kind as ActionTypeKind) ?? "action");
+    } else setExtra(item.org2Eligible ? "true" : "false");
   }
 
   function cancelEdit() {
     setEditingId(null);
     setName("");
     setExtra("");
+    setTypeKind("action");
   }
 
   async function save(e: FormEvent) {
@@ -61,7 +67,10 @@ export function AdminDataClient() {
     };
     if (editingId) body.id = editingId;
     if (tab === "staff") body.rank = extra.trim() || null;
-    if (tab === "types") body.colourHex = extra.trim() || "#ffffff";
+    if (tab === "types") {
+      body.colourHex = extra.trim() || "#ffffff";
+      body.kind = typeKind;
+    }
     if (tab === "gangs") body.org2Eligible = extra !== "false";
 
     const res = await fetch("/api/admin/data", {
@@ -157,6 +166,20 @@ export function AdminDataClient() {
               />
             )}
           </div>
+          {tab === "types" && (
+            <div className="field">
+              <label htmlFor="data-kind">Kind</label>
+              <select
+                id="data-kind"
+                className="input"
+                value={typeKind}
+                onChange={e => setTypeKind(e.target.value as ActionTypeKind)}
+              >
+                <option value="action">Action (schedule + action tracker)</option>
+                <option value="br">BR (BR tracker only)</option>
+              </select>
+            </div>
+          )}
           <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}>
             <button type="submit" className="btn">
               {editingId ? "Save changes" : "Add"}
@@ -198,6 +221,8 @@ export function AdminDataClient() {
                         }}
                       />
                       {String(item.colourHex)}
+                      {" · "}
+                      {item.kind === "br" ? "BR" : "Action"}
                     </span>
                   )}
                   {tab === "gangs" && (item.org2Eligible ? "ORG2 ✓" : "ORG2 ✗")}

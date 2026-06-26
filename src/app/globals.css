@@ -359,6 +359,8 @@ h2 { font-size: 1.25rem; margin: 0 0 16px; }
 .tracker-col-count { width: 4.5rem; }
 .tracker-col-ids { width: 8rem; }
 .tracker-col-comped { width: 6.5rem; text-align: center; }
+.br-tracker-col-place { width: 8rem; }
+.br-tracker-grid .tracker-col-attended { width: 11rem; }
 .tracker-comped-toggle {
   display: inline-flex;
   align-items: center;

@@ -27,7 +27,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const [slots, colorMap, dropdowns] = await Promise.all([
       getScheduleSlots(month.id),
       getTypeColorMap(),
-      getDropdownOptions()
+      getDropdownOptions({ typeKind: "action" })
     ]);
 
     return jsonOk({

@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/lib/crypto";
+import { ensureBrActionTypes } from "../src/services/reference-data";
 
 const prisma = new PrismaClient();
 
@@ -55,6 +56,9 @@ async function main() {
     });
     console.log("Seeded sample action types and gangs.");
   }
+
+  await ensureBrActionTypes();
+  console.log("Ensured BR action types.");
 }
 
 main()

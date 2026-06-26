@@ -108,6 +108,30 @@ export async function publishMonthTrackerChange(params: {
   });
 }
 
+export async function publishMonthBrTrackerChange(params: {
+  monthId: string;
+  monthSlug: string;
+  actorId: string;
+  action: "updated" | "added" | "deleted";
+  rowId?: string;
+}) {
+  const type =
+    params.action === "added"
+      ? "br_tracker.added"
+      : params.action === "deleted"
+        ? "br_tracker.deleted"
+        : "br_tracker.updated";
+
+  await publishLiveEvent({
+    type,
+    scope: "month",
+    monthId: params.monthId,
+    monthSlug: params.monthSlug,
+    entityId: params.rowId,
+    actorId: params.actorId
+  });
+}
+
 /** After points recalc — stats + goals pages refresh. */
 export async function publishTrackerDerivedUpdates(params: {
   monthId: string;

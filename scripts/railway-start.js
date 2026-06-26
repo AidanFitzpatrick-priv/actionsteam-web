@@ -24,6 +24,16 @@ try {
     env: process.env
   });
   console.log("[start] Database schema applied.");
+  try {
+    console.log("[start] Ensuring BR action types…");
+    execSync("npx tsx scripts/bootstrap-br-types.ts", {
+      stdio: "inherit",
+      env: process.env
+    });
+  } catch (err) {
+    console.error("[start] BR type bootstrap failed:", err.message ?? err);
+    process.exit(1);
+  }
 } catch (err) {
   console.error("[start] prisma db push failed:", err.message ?? err);
   process.exit(1);

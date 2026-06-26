@@ -12,6 +12,7 @@ const bodySchema = z.object({
   rank: z.string().nullable().optional(),
   active: z.boolean().optional(),
   colourHex: z.string().optional(),
+  kind: z.enum(["action", "br"]).optional(),
   org2Eligible: z.boolean().optional()
 });
 
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
         id: body.id,
         name: body.name,
         colourHex: body.colourHex,
+        kind: body.kind,
         actorUserId: user.id,
         ipAddress: meta.ipAddress
       });
