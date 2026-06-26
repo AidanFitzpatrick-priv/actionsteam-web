@@ -4,6 +4,7 @@ import {
   canAssignRole,
   canEditUserRole,
   canDeleteUser,
+  canResetUserPassword,
   canEditUsername,
   canHardDeleteMonth,
   canViewBackups,
@@ -71,6 +72,20 @@ describe("canDeleteUser", () => {
     expect(canDeleteUser("aux", "aux")).toBe(false);
     expect(canDeleteUser("aux", "adm")).toBe(false);
     expect(canDeleteUser("lead", "member")).toBe(false);
+  });
+});
+
+describe("canResetUserPassword", () => {
+  it("allows aux+ to reset strictly below rank", () => {
+    expect(canResetUserPassword("aux", "member")).toBe(true);
+    expect(canResetUserPassword("adm", "aux")).toBe(true);
+    expect(canResetUserPassword("management", "adm")).toBe(true);
+  });
+
+  it("blocks same rank or higher", () => {
+    expect(canResetUserPassword("aux", "aux")).toBe(false);
+    expect(canResetUserPassword("aux", "adm")).toBe(false);
+    expect(canResetUserPassword("lead", "member")).toBe(false);
   });
 });
 

@@ -71,3 +71,29 @@ export async function DELETE(req: NextRequest) {
     return jsonError(e);
   }
 }
+
+export async function POST(req: NextRequest) {
+  try {
+    const actor = await requireRole("aux");
+    const body = z
+      .object({
+        userId: z.string(),
+        action: z.literal("resetPassword")
+      })
+      .parse(await req.json());
+    const meta = getMeta(req);
+
+    await users.resetUserPassword({
+      userId: body.userId,
+      actorUserId: actor.id,
+      actorRole: actor.role,
+      ipAddress: meta.ipAddress
+    });
+
+    await publishAdminChange(actor.id, "users");
+
+    return jsonOk({ ok: true });
+  } catch (e) {
+    return jsonError(e);
+  }
+}

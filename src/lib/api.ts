@@ -21,6 +21,9 @@ export async function requireUser(): Promise<NonNullable<Awaited<ReturnType<type
 
 export async function requireRole(minRole: UserRole) {
   const user = await requireUser();
+  if (user.mustResetPassword) {
+    throw new ApiError(403, "You must set a new password before continuing");
+  }
   if (!hasMinRole(user.role, minRole)) {
     throw new ApiError(403, "Insufficient permissions");
   }

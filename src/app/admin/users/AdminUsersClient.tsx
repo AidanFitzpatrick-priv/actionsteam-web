@@ -9,6 +9,7 @@ import {
   canEditUserRole,
   canEditUsername,
   canManageGoalTrackerVisibility,
+  canResetUserPassword,
   formatRole
 } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
@@ -21,6 +22,7 @@ type UserRow = {
   discordId: string | null;
   role: UserRole;
   hiddenFromGoalTrackers?: boolean;
+  mustResetPassword?: boolean;
 };
 
 export function AdminUsersClient({
@@ -106,6 +108,26 @@ export function AdminUsersClient({
     await load();
   }
 
+  async function resetPassword(user: UserRow) {
+    if (
+      !confirm(
+        `Force ${user.username} to set a new password on next login? They will be signed out immediately.`
+      )
+    ) {
+      return;
+    }
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, action: "resetPassword" })
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error ?? "Password reset failed");
+    }
+    await load();
+  }
+
   async function saveUsername(userId: string) {
     const raw = usernameDraft[userId]?.trim();
     if (!raw) return;
@@ -136,6 +158,8 @@ export function AdminUsersClient({
   function renderUserRow(u: UserRow) {
     const canEditRole = canEditUserRole(viewerRole, u.role);
     const canRemove = u.id !== viewerUserId && canDeleteUser(viewerRole, u.role);
+    const canReset =
+      u.id !== viewerUserId && canResetUserPassword(viewerRole, u.role);
     const roleOptions = canEditRole
       ? assignableRoles.includes(u.role)
         ? assignableRoles
@@ -156,6 +180,11 @@ export function AdminUsersClient({
             />
           ) : (
             u.username
+          )}
+          {u.mustResetPassword && (
+            <span className="badge" style={{ marginTop: 4, display: "inline-block" }}>
+              Must change password
+            </span>
           )}
         </td>
         <td>{u.email}</td>
@@ -211,7 +240,17 @@ export function AdminUsersClient({
             )}
           </td>
         )}
-        <td>
+        <td style={{ whiteSpace: "nowrap" }}>
+          {canReset && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ marginRight: 8 }}
+              onClick={() => resetPassword(u)}
+            >
+              Reset password
+            </button>
+          )}
           {canRemove && (
             <button type="button" className="btn btn-danger" onClick={() => removeUser(u)}>
               Delete

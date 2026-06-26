@@ -27,6 +27,10 @@ export const discordIdSchema = z
   .nullable()
   .refine(v => !v || /^\d{17,20}$/.test(v), "Discord ID must be 17–20 digits");
 
+export const passwordSchema = z
+  .string()
+  .min(10, "Password must be at least 10 characters");
+
 export function normalizeCityId(raw: string): string {
   return raw.trim();
 }

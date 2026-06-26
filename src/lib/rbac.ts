@@ -74,6 +74,11 @@ export function canDeleteUser(actorRole: UserRole, targetUserRole: UserRole): bo
   return hasMinRole(actorRole, "aux") && roleLevel(targetUserRole) < roleLevel(actorRole);
 }
 
+/** Admin → Users: aux+ may force password reset for users strictly below their rank. */
+export function canResetUserPassword(actorRole: UserRole, targetUserRole: UserRole): boolean {
+  return hasMinRole(actorRole, "aux") && roleLevel(targetUserRole) < roleLevel(actorRole);
+}
+
 /** Goal scores: own row + everyone strictly below viewer rank; adm/management see all. */
 export function canViewGoalScoreRow(
   viewerRole: UserRole,

@@ -1,7 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
-import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteUser, canManageGoalTrackerVisibility } from "@/lib/rbac";
+import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteUser, canManageGoalTrackerVisibility, canResetUserPassword } from "@/lib/rbac";
 import { usernameSchema } from "@/lib/user-fields";
 import { publishUserGoalSync, removeUserFromGoalData, renameUserDisplayNameInSources, recalculateNonArchivedMonths } from "@/services/user-sync";
 
@@ -24,6 +24,7 @@ export async function listUsers() {
     role: u.role,
     roleLabel: formatRole(u.role),
     hiddenFromGoalTrackers: u.hiddenFromGoalTrackers,
+    mustResetPassword: u.mustResetPassword,
     createdAt: u.createdAt,
     invitedBy: u.invitedViaInvite?.createdBy?.username ?? null
   }));
@@ -145,6 +146,42 @@ export async function updateUser(params: {
     await recalculateNonArchivedMonths();
     await publishUserGoalSync(params.actorUserId);
   }
+
+  return updated;
+}
+
+export async function resetUserPassword(params: {
+  userId: string;
+  actorUserId: string;
+  actorRole: UserRole;
+  ipAddress?: string | null;
+}) {
+  const target = await prisma.user.findUnique({ where: { id: params.userId } });
+  if (!target) throw new Error("User not found");
+
+  if (target.id === params.actorUserId) {
+    throw new Error("You cannot reset your own password here");
+  }
+
+  if (!canResetUserPassword(params.actorRole, target.role)) {
+    throw new Error("You cannot reset the password of someone at or above your rank");
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: params.userId },
+    data: { mustResetPassword: true }
+  });
+
+  await prisma.session.deleteMany({ where: { userId: params.userId } });
+
+  await writeAuditLog({
+    userId: params.actorUserId,
+    action: "user.reset_password",
+    entityType: "user",
+    entityId: params.userId,
+    payload: { username: target.username },
+    ipAddress: params.ipAddress
+  });
 
   return updated;
 }

@@ -12,7 +12,7 @@ export default async function AdminUsersPage() {
     <div className="container-wide">
       <h1>Users</h1>
       <p className="muted">
-        Edit usernames, roles, and IDs, or permanently delete users below your rank. You cannot delete yourself.
+        Edit usernames, roles, and IDs, reset passwords, or permanently delete users below your rank. You cannot delete yourself or reset your own password here.
         Only management can assign management. Management can hide cross-team accounts from goal score pages and
         schedule/tracker dropdowns.
       </p>

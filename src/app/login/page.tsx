@@ -22,7 +22,7 @@ export default function LoginPage() {
       setError(data.error ?? "Login failed");
       return;
     }
-    router.push("/");
+    router.push(data.mustResetPassword ? "/reset-password" : "/");
     router.refresh();
   }
 
