@@ -69,6 +69,18 @@ export async function listActionTypes(kind?: ActionTypeKind) {
 
 export const BR_ACTION_TYPE_NAMES = ["City BR", "Cayo BR", "Sandy BR"] as const;
 
+/** Action types bookable on schedule but hidden from the action tracker dropdown. */
+export const TRACKER_HIDDEN_ACTION_TYPE_NAMES = ["Actions Meeting", "Staff Meeting"] as const;
+
+export function isHiddenFromActionTracker(typeName: string): boolean {
+  const normalized = typeName.trim().toLowerCase();
+  return TRACKER_HIDDEN_ACTION_TYPE_NAMES.some(n => n.toLowerCase() === normalized);
+}
+
+export function filterTypesForActionTracker<T extends { name: string }>(types: T[]): T[] {
+  return types.filter(t => !isHiddenFromActionTracker(t.name));
+}
+
 const BR_TYPE_SEEDS: { name: string; colourHex: string }[] = [
   { name: "City BR", colourHex: "#d9d2e9" },
   { name: "Cayo BR", colourHex: "#cfe2f3" },
@@ -206,8 +218,14 @@ export function statusOptionsForTypeKind(typeKind?: ActionTypeKind): string[] {
 }
 
 /** Dropdown options for tracker/schedule — PD first in org2 list. */
-export async function getDropdownOptions(opts?: { typeKind?: ActionTypeKind }) {
-  const typeKind = opts?.typeKind;
+export async function getDropdownOptions(opts?: {
+  typeKind?: ActionTypeKind;
+  /** Action tracker: action types only, minus meeting types. */
+  actionTracker?: boolean;
+  /** Schedule grid: all bookable types (actions, meetings, and BRs). */
+  schedule?: boolean;
+}) {
+  const typeKind = opts?.schedule ? undefined : opts?.typeKind;
   const [staff, types, gangs, accountUsers] = await Promise.all([
     listStaff(),
     listActionTypes(typeKind),
@@ -222,12 +240,14 @@ export async function getDropdownOptions(opts?: { typeKind?: ActionTypeKind }) {
   const org1Names = gangs.map(g => g.name);
   const org2Names = ["PD", ...gangs.filter(g => g.org2Eligible).map(g => g.name)];
 
+  const visibleTypes = opts?.actionTracker ? filterTypesForActionTracker(types) : types;
+
   return {
     staff: staff.filter(s => s.active).map(s => s.name),
     accountUsers: accountUsers
       .filter(u => shouldShowOnGoalTracker(u.role as UserRole, u.hiddenFromGoalTrackers))
       .map(u => u.username),
-    types: types.map(t => ({ name: t.name, colourHex: t.colourHex, kind: t.kind })),
+    types: visibleTypes.map(t => ({ name: t.name, colourHex: t.colourHex, kind: t.kind })),
     org1: org1Names,
     org2: org2Names,
     statusOptions: statusOptionsForTypeKind(typeKind)

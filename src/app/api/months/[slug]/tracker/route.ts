@@ -28,7 +28,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const { getDropdownOptions } = await import("@/services/reference-data");
     const { getTypeColorMap, colorForType } = await import("@/services/schedule");
     const [dropdowns, colorMap] = await Promise.all([
-      getDropdownOptions({ typeKind: "action" }),
+      getDropdownOptions({ typeKind: "action", actionTracker: true }),
       getTypeColorMap()
     ]);
 
