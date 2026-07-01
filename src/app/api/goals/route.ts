@@ -1,11 +1,10 @@
 import { NextRequest } from "next/server";
 import { jsonError, jsonOk, requireRole, ApiError } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { formatDateUK } from "@/lib/dates";
 import { cleanName } from "@/lib/names";
 import { canViewGoalScoreRow, shouldShowOnGoalTracker, sortGoalTrackerRows } from "@/lib/rbac";
 import { UserRole } from "@prisma/client";
-import { ensureGoalWeekDates } from "@/services/goal-week";
+import { ensureGoalWeekDates, buildWeekColumns } from "@/services/goal-week";
 import { recalculateAllPoints, recalculatePointsForMonth } from "@/services/points";
 
 export async function GET(req: NextRequest) {
@@ -22,7 +21,7 @@ export async function GET(req: NextRequest) {
           where: { isActive: true, archivedAt: null }
         });
 
-    if (!month || month.archivedAt) return jsonOk({ month: null, weekDates: [], scores: [] });
+    if (!month || month.archivedAt) return jsonOk({ month: null, weekColumns: [], scores: [] });
 
     let scores = await prisma.goalScore.findMany({
       where: { monthId: month.id, kind },
@@ -42,7 +41,7 @@ export async function GET(req: NextRequest) {
     }
 
     const weekDateObjs = await ensureGoalWeekDates(month);
-    const weekDates = weekDateObjs.map(d => (d ? formatDateUK(d) : ""));
+    const weekColumns = buildWeekColumns(weekDateObjs);
 
     const [users, staff] = await Promise.all([
       prisma.user.findMany({
@@ -84,19 +83,21 @@ export async function GET(req: NextRequest) {
           if (!shouldShowOnGoalTracker(meta.role, meta.hidden)) return false;
           return canViewGoalScoreRow(user.role, meta.role, isOwn);
         })
-        .map(([staffName, points]) => {
+        .map(([staffName, fullPoints]) => {
           const key = cleanName(staffName);
           const meta = userMetaByKey.get(key) ?? { role: "member" as UserRole, hidden: false };
+          const points = weekColumns.map(c => fullPoints[c.dayIndex]);
+          const total = points.reduce((a, b) => a + b, 0);
           return {
             staffName,
             role: meta.role,
             points,
-            total: points.reduce((a, b) => a + b, 0)
+            total
           };
         })
     );
 
-    return jsonOk({ month, weekDates, scores: rows, kind });
+    return jsonOk({ month, weekColumns, scores: rows, kind });
   } catch (e) {
     return jsonError(e);
   }

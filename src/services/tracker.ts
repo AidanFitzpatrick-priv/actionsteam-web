@@ -58,22 +58,19 @@ export async function softDeleteTrackerRow(rowId: string) {
   });
 }
 
-export async function loadStatsRows(useAllMonths = false): Promise<StatsRow[]> {
-  const rows = await prisma.trackerRow.findMany({
-    where: { deletedAt: null, ...(useAllMonths ? {} : {}) },
-    select: {
-      actionDate: true,
-      typeName: true,
-      org1Name: true,
-      org2Name: true,
-      attended: true,
-      actionWinner: true,
-      org1Attended: true,
-      org2Attended: true,
-      status: true
-    }
-  });
-
+function mapTrackerRowsToStats(
+  rows: Array<{
+    actionDate: Date | null;
+    typeName: string | null;
+    org1Name: string | null;
+    org2Name: string | null;
+    attended: string[];
+    actionWinner: string | null;
+    org1Attended: string | null;
+    org2Attended: string | null;
+    status: string[];
+  }>
+): StatsRow[] {
   return rows.map(r => ({
     type: r.typeName ?? "",
     gang: r.org1Name ?? "",
@@ -103,15 +100,5 @@ export async function loadStatsForMonth(monthId: string): Promise<StatsRow[]> {
     }
   });
 
-  return rows.map(r => ({
-    type: r.typeName ?? "",
-    gang: r.org1Name ?? "",
-    org2: r.org2Name ?? "",
-    attendedList: r.attended.join(", "),
-    winner: r.actionWinner ?? "",
-    pdMembers: r.org2Attended,
-    gangMembers: r.org1Attended,
-    status: r.status.join(", "),
-    date: r.actionDate
-  }));
+  return mapTrackerRowsToStats(rows);
 }

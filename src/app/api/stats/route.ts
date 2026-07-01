@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { jsonError, jsonOk, requireRole } from "@/lib/api";
-import { loadStatsRows } from "@/services/tracker";
+import { loadStatsForMonth } from "@/services/tracker";
 import { buildAllStatsTables, isRealActionRow } from "@/services/stats";
 import { computeMonthlyActionTotals } from "@/services/points";
 import { prisma } from "@/lib/db";
@@ -10,14 +10,25 @@ import { cleanName } from "@/lib/names";
 export async function GET(req: NextRequest) {
   try {
     await requireRole("member");
-    const all = req.nextUrl.searchParams.get("all") === "1";
-    const rows = await loadStatsRows(all);
+    const monthSlug = req.nextUrl.searchParams.get("month");
+
+    const month = monthSlug
+      ? await prisma.month.findUnique({ where: { slug: monthSlug } })
+      : await prisma.month.findFirst({
+          where: { isActive: true, archivedAt: null }
+        });
+
+    if (!month || month.archivedAt) {
+      return jsonOk({ month: null, tables: {} });
+    }
+
+    const rows = await loadStatsForMonth(month.id);
     const real = rows.filter(isRealActionRow);
     const tables = buildAllStatsTables(real, rows);
 
     const totals = computeMonthlyActionTotals(
       await prisma.trackerRow.findMany({
-        where: { deletedAt: null },
+        where: { monthId: month.id, deletedAt: null },
         select: { status: true, hostedBy: true, attended: true }
       })
     );
@@ -41,7 +52,15 @@ export async function GET(req: NextRequest) {
       )
     };
 
-    return jsonOk({ tables: { ...tables, monthlyStaffScores } });
+    return jsonOk({
+      month: {
+        name: month.name,
+        slug: month.slug,
+        year: month.year,
+        isActive: month.isActive
+      },
+      tables: { ...tables, monthlyStaffScores }
+    });
   } catch (e) {
     return jsonError(e);
   }

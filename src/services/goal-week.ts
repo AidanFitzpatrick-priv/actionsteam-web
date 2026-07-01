@@ -2,7 +2,7 @@
  * Goal tracker week dates (Action/Booking Goal Tracker row 1 in the sheet).
  */
 import { prisma } from "@/lib/db";
-import { isSameYMD, toDateOnly } from "@/lib/dates";
+import { formatDateUK, isSameYMD, toDateOnly } from "@/lib/dates";
 import { getCalendarForMonth } from "@/services/schedule-calendar";
 import type { ScheduleWeek } from "@/lib/schedule-calendar";
 
@@ -62,6 +62,13 @@ export async function ensureGoalWeekDates(month: {
   }
 
   return weekDates;
+}
+
+/** Schedule-aligned columns — only days that fall inside the month for the scoring week. */
+export function buildWeekColumns(weekDateObjs: (Date | null)[]): { dayIndex: number; date: string }[] {
+  return weekDateObjs.flatMap((d, dayIndex) =>
+    d ? [{ dayIndex, date: formatDateUK(d) }] : []
+  );
 }
 
 export async function getGoalWeekDates(monthId: string): Promise<(Date | null)[]> {

@@ -6,20 +6,7 @@ import { GOAL_TRACKER_ROLE_GROUPS } from "@/lib/rbac";
 import { goalMet } from "@/lib/goals";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
-const WEEKDAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
-
-/** Mon–Sun headers: show date when in month, otherwise weekday label. */
-function weekColumnLabels(weekDates: string[]): { label: string; hasDate: boolean }[] {
-  if (weekDates.length !== 7) {
-    return WEEKDAY_SHORT.map(label => ({ label, hasDate: false }));
-  }
-  return weekDates.map((d, i) => {
-    const trimmed = d.trim();
-    return trimmed
-      ? { label: trimmed, hasDate: true }
-      : { label: WEEKDAY_SHORT[i], hasDate: false };
-  });
-}
+type WeekColumn = { dayIndex: number; date: string };
 
 type MonthOption = {
   id: string;
@@ -44,9 +31,9 @@ function monthLabel(m: MonthOption): string {
 
 export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) {
   const [data, setData] = useState<{
-    weekDates: string[];
+    weekColumns: WeekColumn[];
     scores: ScoreRow[];
-    month?: { name: string; slug: string; isActive: boolean } | null;
+    month?: { name: string; slug: string; isActive: boolean; year?: number | null } | null;
   } | null>(null);
   const [months, setMonths] = useState<MonthOption[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string>("");
@@ -109,8 +96,8 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
 
   if (!data) return <p className="muted">Loading…</p>;
 
-  const dayColumns = weekColumnLabels(data.weekDates);
-  const colCount = dayColumns.length + 3;
+  const weekColumns = data.weekColumns;
+  const colCount = weekColumns.length + 3;
 
   return (
     <div>
@@ -133,7 +120,7 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
         </div>
       )}
       <p className="muted">
-        Weekly Mon–Sun points. You see your row and everyone below your rank. Updates live.
+        Weekly points for days in the current schedule week. You see your row and everyone below your rank. Updates live.
         {monthPicker && data.month && !data.month.isActive && (
           <> Viewing <strong>{data.month.name}</strong> (not the active month).</>
         )}
@@ -143,14 +130,8 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
           <thead>
             <tr>
               <th>Staff</th>
-              {dayColumns.map((col, i) => (
-                <th
-                  key={i}
-                  className={col.hasDate ? undefined : "goal-day-outside-month"}
-                  title={col.hasDate ? undefined : "Outside this month"}
-                >
-                  {col.label}
-                </th>
+              {weekColumns.map(col => (
+                <th key={col.dayIndex}>{col.date}</th>
               ))}
               <th>Total</th>
               <th>Goal</th>
@@ -166,12 +147,7 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
                   <tr key={s.staffName}>
                     <td>{s.staffName}</td>
                     {s.points.map((p, i) => (
-                      <td
-                        key={i}
-                        className={dayColumns[i]?.hasDate ? undefined : "goal-day-outside-month"}
-                      >
-                        {p}
-                      </td>
+                      <td key={weekColumns[i]?.dayIndex ?? i}>{p}</td>
                     ))}
                     <td><strong>{s.total}</strong></td>
                     <td

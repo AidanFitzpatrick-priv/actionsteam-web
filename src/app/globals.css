@@ -131,10 +131,6 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
   font-weight: 700;
   text-align: center;
 }
-.goal-day-outside-month {
-  color: var(--muted);
-  font-size: 12px;
-}
 
 .badge {
   display: inline-block;
