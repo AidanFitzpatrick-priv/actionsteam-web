@@ -11,6 +11,8 @@ type Options = {
   invites?: boolean;
   /** Skip events from this user (avoid echo after own PATCH). */
   selfUserId?: string;
+  /** Event types that should still fire when actorId === selfUserId. */
+  acceptOwnEventTypes?: LiveEventRecord["type"][];
   onEvent: (event: LiveEventRecord) => void;
 };
 
@@ -26,6 +28,7 @@ export function useLiveSync({
   admin,
   invites,
   selfUserId,
+  acceptOwnEventTypes,
   onEvent
 }: Options) {
   /** Start 30s in the past so we don't miss events during page load. */
@@ -33,6 +36,8 @@ export function useLiveSync({
   const seenIds = useRef(new Set<string>());
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
+  const acceptOwnRef = useRef(acceptOwnEventTypes);
+  acceptOwnRef.current = acceptOwnEventTypes;
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +61,10 @@ export function useLiveSync({
           seenIds.current.add(ev.id);
           if (ev.createdAt > latestCreatedAt) latestCreatedAt = ev.createdAt;
 
-          if (selfUserId && ev.actorId === selfUserId) continue;
+          if (selfUserId && ev.actorId === selfUserId) {
+            const allowOwn = acceptOwnRef.current?.includes(ev.type);
+            if (!allowOwn) continue;
+          }
           onEventRef.current(ev);
         }
 
@@ -88,7 +96,7 @@ export function useLiveSync({
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [intervalMs, monthSlug, admin, invites, selfUserId]);
+  }, [intervalMs, monthSlug, admin, invites, selfUserId, acceptOwnEventTypes]);
 }
 
 /** Track row/slot ids currently being edited — skip remote merge for these. */

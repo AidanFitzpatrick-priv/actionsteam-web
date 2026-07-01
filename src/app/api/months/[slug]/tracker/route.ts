@@ -10,7 +10,7 @@ import {
   loadStatsForMonth
 } from "@/services/tracker";
 import { buildAllStatsTables } from "@/services/stats";
-import { recalculateAllPoints } from "@/services/points";
+import { recalculatePointsForMonth } from "@/services/points";
 import { parseDate } from "@/lib/dates";
 import { writeAuditLog } from "@/lib/audit";
 import { publishMonthTrackerChange, publishTrackerDerivedUpdates } from "@/services/live-sync";
@@ -94,7 +94,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         action: "deleted",
         rowId: body.rowId
       });
-      void recalculateAllPoints().then(() =>
+      void recalculatePointsForMonth(month.id).then(() =>
         publishTrackerDerivedUpdates({
           monthId: month.id,
           monthSlug: slug,
@@ -148,7 +148,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       rowId: row.id
     });
 
-    void recalculateAllPoints().then(() =>
+    void recalculatePointsForMonth(month.id).then(() =>
       publishTrackerDerivedUpdates({
         monthId: month.id,
         monthSlug: slug,

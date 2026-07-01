@@ -23,13 +23,16 @@ export function parseDate(input: unknown): Date | null {
 
   let m: number;
   let d: number;
-  // UK: if first part > 12, treat as day/month/year
+  // UK DD/MM: day-first when unambiguous; default DD/MM when both parts ≤ 12.
   if (a > 12) {
     d = a;
     m = b;
-  } else {
+  } else if (b > 12) {
     m = a;
     d = b;
+  } else {
+    d = a;
+    m = b;
   }
 
   const date = new Date(y, m - 1, d, 12, 0, 0);

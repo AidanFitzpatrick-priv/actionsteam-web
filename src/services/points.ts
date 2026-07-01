@@ -49,7 +49,11 @@ async function buildScoreParticipants(): Promise<Map<string, string>> {
   return displayByKey;
 }
 
-/** accumulateActionPointsFromTracker_ */
+/**
+ * Weekly action points from tracker rows.
+ * Counts only when: status is set (e.g. Completed), actionDate matches a day in targetDates,
+ * and hostedBy/attended names match staff or account users (cleanName).
+ */
 export function accumulateActionPointsFromTracker(
   rows: Array<{
     actionDate: Date | null;

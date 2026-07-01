@@ -96,6 +96,47 @@ function attendedOptionsForRow(accountUsers: string[], attended: string[]): stri
   );
 }
 
+function ActionDateInput({
+  rowId,
+  actionDate,
+  onPatch,
+  onEditStart,
+  onEditEnd
+}: {
+  rowId: string;
+  actionDate: string | null;
+  onPatch: (rowId: string, patch: Record<string, unknown>) => void;
+  onEditStart: (rowId: string) => void;
+  onEditEnd: (rowId: string) => void;
+}) {
+  const serverValue = actionDate ? formatDateUKShort(new Date(actionDate)) : "";
+  const [draft, setDraft] = useState(serverValue);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (!editing) setDraft(serverValue);
+  }, [serverValue, editing]);
+
+  return (
+    <input
+      className="input-compact tracker-field"
+      aria-label="Action date"
+      placeholder="DD/MM/YY"
+      value={editing ? draft : serverValue}
+      onChange={e => setDraft(e.target.value)}
+      onFocus={() => {
+        setEditing(true);
+        onEditStart(rowId);
+      }}
+      onBlur={e => {
+        setEditing(false);
+        onPatch(rowId, { actionDate: e.target.value || null });
+        onEditEnd(rowId);
+      }}
+    />
+  );
+}
+
 function AttendedCheckboxDropdown({
   rowId,
   attended,
@@ -421,18 +462,12 @@ export function TrackerClient({
                 return (
                   <tr key={row.id} className={filled ? "is-filled" : "is-empty"}>
                     <td className="tracker-col-date">
-                      <input
-                        className="input-compact tracker-field"
-                        aria-label="Action date"
-                        placeholder="DD/MM/YY"
-                        defaultValue={
-                          row.actionDate ? formatDateUKShort(new Date(row.actionDate)) : ""
-                        }
-                        onFocus={() => markEditing(row.id)}
-                        onBlur={e => {
-                          updateRow(row.id, { actionDate: e.target.value || null });
-                          markDoneEditing(row.id);
-                        }}
+                      <ActionDateInput
+                        rowId={row.id}
+                        actionDate={row.actionDate}
+                        onPatch={updateRow}
+                        onEditStart={markEditing}
+                        onEditEnd={markDoneEditing}
                       />
                     </td>
                     <td

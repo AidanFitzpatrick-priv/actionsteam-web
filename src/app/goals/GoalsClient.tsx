@@ -6,6 +6,21 @@ import { GOAL_TRACKER_ROLE_GROUPS } from "@/lib/rbac";
 import { goalMet } from "@/lib/goals";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
+const WEEKDAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+/** Mon–Sun headers: show date when in month, otherwise weekday label. */
+function weekColumnLabels(weekDates: string[]): { label: string; hasDate: boolean }[] {
+  if (weekDates.length !== 7) {
+    return WEEKDAY_SHORT.map(label => ({ label, hasDate: false }));
+  }
+  return weekDates.map((d, i) => {
+    const trimmed = d.trim();
+    return trimmed
+      ? { label: trimmed, hasDate: true }
+      : { label: WEEKDAY_SHORT[i], hasDate: false };
+  });
+}
+
 type MonthOption = {
   id: string;
   name: string;
@@ -78,6 +93,7 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
 
   useLiveSync({
     selfUserId,
+    acceptOwnEventTypes: ["goals.updated"],
     onEvent: ev => {
       if (ev.type === "goals.updated") load();
     }
@@ -93,10 +109,8 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
 
   if (!data) return <p className="muted">Loading…</p>;
 
-  const dayLabels = data.weekDates.length === 7
-    ? data.weekDates
-    : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const colCount = dayLabels.length + 3;
+  const dayColumns = weekColumnLabels(data.weekDates);
+  const colCount = dayColumns.length + 3;
 
   return (
     <div>
@@ -129,7 +143,15 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
           <thead>
             <tr>
               <th>Staff</th>
-              {dayLabels.map((d, i) => <th key={i}>{d}</th>)}
+              {dayColumns.map((col, i) => (
+                <th
+                  key={i}
+                  className={col.hasDate ? undefined : "goal-day-outside-month"}
+                  title={col.hasDate ? undefined : "Outside this month"}
+                >
+                  {col.label}
+                </th>
+              ))}
               <th>Total</th>
               <th>Goal</th>
             </tr>
@@ -143,7 +165,14 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
                 {group.rows.map(s => (
                   <tr key={s.staffName}>
                     <td>{s.staffName}</td>
-                    {s.points.map((p, i) => <td key={i}>{p}</td>)}
+                    {s.points.map((p, i) => (
+                      <td
+                        key={i}
+                        className={dayColumns[i]?.hasDate ? undefined : "goal-day-outside-month"}
+                      >
+                        {p}
+                      </td>
+                    ))}
                     <td><strong>{s.total}</strong></td>
                     <td
                       className={goalMet(s.total) ? "goal-met" : "goal-not-met"}
