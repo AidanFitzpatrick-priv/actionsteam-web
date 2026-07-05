@@ -46,7 +46,7 @@ After the last F3:
 
 From here, watch over the event in **noclip with walls on**.
 
-If you can't use the required perms, **DM Barry** and he will sort them. For now, let someone who has perms grab the host role if needed.
+If you can't use perms, DM Barry. For the time being, just get someone to carry you in H grab.
 
 ---
 
