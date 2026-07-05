@@ -11,8 +11,6 @@ type Row = {
   status: string[];
   attended: string[];
   firstPlace: string | null;
-  secondPlace: string | null;
-  thirdPlace: string | null;
   winnerComped: boolean;
   colour: string;
 };
@@ -157,9 +155,7 @@ function rowHasData(row: Row): boolean {
       row.typeName?.trim() ||
       row.status.length ||
       row.attended.length ||
-      row.firstPlace?.trim() ||
-      row.secondPlace?.trim() ||
-      row.thirdPlace?.trim()
+      row.firstPlace?.trim()
   );
 }
 
@@ -325,8 +321,6 @@ export function BrTrackerClient({
               <th className="tracker-col-status">Status</th>
               <th className="tracker-col-attended">Attended</th>
               <th className="br-tracker-col-place">1st place</th>
-              <th className="br-tracker-col-place">2nd place</th>
-              <th className="br-tracker-col-place">3rd place</th>
               <th className="tracker-col-comped">Winner comped</th>
               <th className="tracker-col-actions" aria-label="Actions" />
             </tr>
@@ -334,7 +328,7 @@ export function BrTrackerClient({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="tracker-empty-hint muted">
+                <td colSpan={7} className="tracker-empty-hint muted">
                   No rows yet — press Add row to log a BR.
                 </td>
               </tr>
@@ -412,34 +406,6 @@ export function BrTrackerClient({
                         onFocus={() => markEditing(row.id)}
                         onBlur={e => {
                           updateRow(row.id, { firstPlace: e.target.value.trim() || null });
-                          markDoneEditing(row.id);
-                        }}
-                      />
-                    </td>
-                    <td className="br-tracker-col-place">
-                      <input
-                        className="input-compact tracker-field"
-                        aria-label="2nd place IDs"
-                        placeholder="IDs"
-                        maxLength={500}
-                        defaultValue={row.secondPlace ?? ""}
-                        onFocus={() => markEditing(row.id)}
-                        onBlur={e => {
-                          updateRow(row.id, { secondPlace: e.target.value.trim() || null });
-                          markDoneEditing(row.id);
-                        }}
-                      />
-                    </td>
-                    <td className="br-tracker-col-place">
-                      <input
-                        className="input-compact tracker-field"
-                        aria-label="3rd place IDs"
-                        placeholder="IDs"
-                        maxLength={500}
-                        defaultValue={row.thirdPlace ?? ""}
-                        onFocus={() => markEditing(row.id)}
-                        onBlur={e => {
-                          updateRow(row.id, { thirdPlace: e.target.value.trim() || null });
                           markDoneEditing(row.id);
                         }}
                       />
