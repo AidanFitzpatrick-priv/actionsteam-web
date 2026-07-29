@@ -205,7 +205,7 @@ export function AdminUsersClient({
         <td>
           <input
             className="input"
-            style={{ maxWidth: 180, padding: "4px 8px", fontSize: 13 }}
+            style={{ minWidth: 200, width: 200, padding: "4px 8px", fontSize: 13 }}
             value={discordDraft[u.id] ?? ""}
             placeholder="17–20 digits"
             onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
@@ -216,6 +216,7 @@ export function AdminUsersClient({
           {canEditRole ? (
             <select
               className="select"
+              style={{ minWidth: 130, width: 130 }}
               value={u.role}
               onChange={e => patch(u.id, { role: e.target.value as UserRole })}
             >
@@ -230,6 +231,7 @@ export function AdminUsersClient({
         <td>
           <select
             className="select"
+            style={{ minWidth: 110, width: 110 }}
             value={u.org ?? ""}
             onChange={e => {
               const value = e.target.value;
@@ -263,8 +265,8 @@ export function AdminUsersClient({
   }
 
   return (
-    <div className="card">
-      <table className="table">
+    <div className="card" style={{ overflowX: "auto" }}>
+      <table className="table" style={{ minWidth: 980 }}>
         <thead>
           <tr>
             <th>Username</th>
