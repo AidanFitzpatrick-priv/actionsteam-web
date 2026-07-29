@@ -9,7 +9,7 @@ export default async function AdminUsersPage() {
   if (!isFullAdmin(user.role)) redirect("/");
 
   return (
-    <div className="container-wide">
+    <div className="container-users">
       <h1>Users</h1>
       <p className="muted">
         Edit usernames, roles, and IDs, reset passwords, or permanently delete users below your rank. You cannot delete yourself or reset your own password here.

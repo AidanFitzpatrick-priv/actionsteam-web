@@ -175,8 +175,7 @@ export function AdminUsersClient({
         <td>
           {canEditNames ? (
             <input
-              className="input"
-              style={{ maxWidth: 140, padding: "4px 8px", fontSize: 13 }}
+              className="input field-fill"
               value={usernameDraft[u.id] ?? ""}
               placeholder="Username"
               onChange={e => setUsernameDraft(d => ({ ...d, [u.id]: e.target.value }))}
@@ -191,11 +190,10 @@ export function AdminUsersClient({
             </span>
           )}
         </td>
-        <td>{u.email}</td>
+        <td className="email-cell" title={u.email}>{u.email}</td>
         <td>
           <input
-            className="input"
-            style={{ maxWidth: 140, padding: "4px 8px", fontSize: 13 }}
+            className="input field-fill"
             value={cityDraft[u.id] ?? ""}
             placeholder="City ID"
             onChange={e => setCityDraft(d => ({ ...d, [u.id]: e.target.value }))}
@@ -204,8 +202,7 @@ export function AdminUsersClient({
         </td>
         <td>
           <input
-            className="input"
-            style={{ minWidth: 200, width: 200, padding: "4px 8px", fontSize: 13 }}
+            className="input field-fill discord-field"
             value={discordDraft[u.id] ?? ""}
             placeholder="17–20 digits"
             onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
@@ -215,8 +212,7 @@ export function AdminUsersClient({
         <td>
           {canEditRole ? (
             <select
-              className="select"
-              style={{ minWidth: 130, width: 130 }}
+              className="select field-fill"
               value={u.role}
               onChange={e => patch(u.id, { role: e.target.value as UserRole })}
             >
@@ -230,8 +226,7 @@ export function AdminUsersClient({
         </td>
         <td>
           <select
-            className="select"
-            style={{ minWidth: 110, width: 110 }}
+            className="select field-fill"
             value={u.org ?? ""}
             onChange={e => {
               const value = e.target.value;
@@ -243,12 +238,11 @@ export function AdminUsersClient({
             <option value="pd">PD</option>
           </select>
         </td>
-        <td style={{ whiteSpace: "nowrap" }}>
+        <td className="actions-cell">
           {canReset && (
             <button
               type="button"
               className="btn btn-secondary"
-              style={{ marginRight: 8 }}
               onClick={() => resetPassword(u)}
             >
               Reset password
@@ -265,17 +259,17 @@ export function AdminUsersClient({
   }
 
   return (
-    <div className="card" style={{ overflowX: "auto" }}>
-      <table className="table" style={{ minWidth: 980 }}>
+    <div className="card">
+      <table className="table admin-users-table">
         <thead>
           <tr>
-            <th>Username</th>
-            <th>Email</th>
-            <th>City ID</th>
-            <th>Discord ID</th>
-            <th>Role</th>
-            <th>Org</th>
-            <th>Actions</th>
+            <th className="col-username">Username</th>
+            <th className="col-email">Email</th>
+            <th className="col-city">City ID</th>
+            <th className="col-discord">Discord ID</th>
+            <th className="col-role">Role</th>
+            <th className="col-org">Org</th>
+            <th className="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
