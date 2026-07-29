@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { UserOrg, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
 import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteUser, canManageGoalTrackerVisibility, canResetUserPassword } from "@/lib/rbac";
@@ -23,6 +23,7 @@ export async function listUsers() {
     discordId: u.discordId,
     role: u.role,
     roleLabel: formatRole(u.role),
+    org: u.org,
     hiddenFromGoalTrackers: u.hiddenFromGoalTrackers,
     mustResetPassword: u.mustResetPassword,
     createdAt: u.createdAt,
@@ -38,6 +39,7 @@ export async function updateUser(params: {
   username?: string;
   cityId?: string | null;
   discordId?: string | null;
+  org?: UserOrg | null;
   hiddenFromGoalTrackers?: boolean;
   ipAddress?: string | null;
 }) {
@@ -97,6 +99,7 @@ export async function updateUser(params: {
     username?: string;
     cityId?: string | null;
     discordId?: string | null;
+    org?: UserOrg | null;
     hiddenFromGoalTrackers?: boolean;
   } = {};
   if (params.role !== undefined) data.role = params.role;
@@ -108,6 +111,9 @@ export async function updateUser(params: {
   }
   if (params.discordId !== undefined) {
     data.discordId = params.discordId?.trim() || null;
+  }
+  if (params.org !== undefined) {
+    data.org = params.org;
   }
   if (params.hiddenFromGoalTrackers !== undefined) {
     data.hiddenFromGoalTrackers = params.hiddenFromGoalTrackers;
@@ -132,6 +138,7 @@ export async function updateUser(params: {
       username: params.username,
       cityId: params.cityId,
       discordId: params.discordId,
+      org: params.org,
       hiddenFromGoalTrackers: params.hiddenFromGoalTrackers
     },
     ipAddress: params.ipAddress

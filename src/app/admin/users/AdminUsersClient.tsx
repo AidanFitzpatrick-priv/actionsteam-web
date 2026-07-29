@@ -1,14 +1,13 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import type { UserRole } from "@prisma/client";
+import type { UserOrg, UserRole } from "@prisma/client";
 import {
   ADMIN_USER_ROLE_GROUPS,
   allowedRoleOptionsForActor,
   canDeleteUser,
   canEditUserRole,
   canEditUsername,
-  canManageGoalTrackerVisibility,
   canResetUserPassword,
   formatRole
 } from "@/lib/rbac";
@@ -21,7 +20,7 @@ type UserRow = {
   cityId: string | null;
   discordId: string | null;
   role: UserRole;
-  hiddenFromGoalTrackers?: boolean;
+  org: UserOrg | null;
   mustResetPassword?: boolean;
 };
 
@@ -38,7 +37,6 @@ export function AdminUsersClient({
   const [discordDraft, setDiscordDraft] = useState<Record<string, string>>({});
   const assignableRoles = allowedRoleOptionsForActor(viewerRole);
   const canEditNames = canEditUsername(viewerRole);
-  const canManageGoalVisibility = canManageGoalTrackerVisibility(viewerRole);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/users");
@@ -80,7 +78,13 @@ export function AdminUsersClient({
 
   async function patch(
     userId: string,
-    patch: { role?: UserRole; username?: string; cityId?: string | null; discordId?: string | null; hiddenFromGoalTrackers?: boolean }
+    patch: {
+      role?: UserRole;
+      username?: string;
+      cityId?: string | null;
+      discordId?: string | null;
+      org?: UserOrg | null;
+    }
   ) {
     const res = await fetch("/api/admin/users", {
       method: "PATCH",
@@ -153,7 +157,7 @@ export function AdminUsersClient({
     })).filter(g => g.users.length > 0);
   }, [users]);
 
-  const colCount = canManageGoalVisibility ? 7 : 6;
+  const colCount = 7;
 
   function renderUserRow(u: UserRow) {
     const canEditRole = canEditUserRole(viewerRole, u.role);
@@ -223,23 +227,20 @@ export function AdminUsersClient({
             <span className="muted">{formatRole(u.role)}</span>
           )}
         </td>
-        {canManageGoalVisibility && (
-          <td>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-              <input
-                type="checkbox"
-                checked={Boolean(u.hiddenFromGoalTrackers)}
-                onChange={e => patch(u.id, { hiddenFromGoalTrackers: e.target.checked })}
-              />
-              Hide from goals
-            </label>
-            {u.hiddenFromGoalTrackers && (
-              <span className="badge" style={{ marginTop: 4, display: "inline-block" }}>
-                Hidden from goals
-              </span>
-            )}
-          </td>
-        )}
+        <td>
+          <select
+            className="select"
+            value={u.org ?? ""}
+            onChange={e => {
+              const value = e.target.value;
+              patch(u.id, { org: value === "" ? null : (value as UserOrg) });
+            }}
+          >
+            <option value="">—</option>
+            <option value="gang">Gang</option>
+            <option value="pd">PD</option>
+          </select>
+        </td>
         <td style={{ whiteSpace: "nowrap" }}>
           {canReset && (
             <button
@@ -271,7 +272,7 @@ export function AdminUsersClient({
             <th>City ID</th>
             <th>Discord ID</th>
             <th>Role</th>
-            {canManageGoalVisibility && <th>Goal trackers</th>}
+            <th>Org</th>
             <th>Actions</th>
           </tr>
         </thead>

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { UserRole } from "@prisma/client";
+import { UserOrg, UserRole } from "@prisma/client";
 import { jsonError, jsonOk, requireRole, getMeta } from "@/lib/api";
 import { optionalCityIdSchema, discordIdSchema, usernameSchema } from "@/lib/user-fields";
 import { publishAdminChange } from "@/services/live-sync";
@@ -26,6 +26,7 @@ export async function PATCH(req: NextRequest) {
         username: usernameSchema.optional(),
         cityId: optionalCityIdSchema,
         discordId: discordIdSchema,
+        org: z.nativeEnum(UserOrg).nullable().optional(),
         hiddenFromGoalTrackers: z.boolean().optional()
       })
       .parse(await req.json());
@@ -39,6 +40,7 @@ export async function PATCH(req: NextRequest) {
       username: body.username,
       cityId: body.cityId,
       discordId: body.discordId,
+      org: body.org,
       hiddenFromGoalTrackers: body.hiddenFromGoalTrackers,
       ipAddress: meta.ipAddress
     });

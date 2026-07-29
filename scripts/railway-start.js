@@ -34,6 +34,16 @@ try {
     console.error("[start] BR type bootstrap failed:", err.message ?? err);
     process.exit(1);
   }
+  try {
+    console.log("[start] Seeding initial user orgs…");
+    execSync("npx tsx scripts/bootstrap-user-orgs.ts", {
+      stdio: "inherit",
+      env: process.env
+    });
+  } catch (err) {
+    console.error("[start] User org bootstrap failed:", err.message ?? err);
+    process.exit(1);
+  }
 } catch (err) {
   console.error("[start] prisma db push failed:", err.message ?? err);
   process.exit(1);
