@@ -2,15 +2,20 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { UserOrg, UserRole } from "@prisma/client";
 import { jsonError, jsonOk, requireRole, getMeta } from "@/lib/api";
+import { isFullAdmin } from "@/lib/rbac";
 import { optionalCityIdSchema, discordIdSchema, usernameSchema } from "@/lib/user-fields";
 import { publishAdminChange } from "@/services/live-sync";
 import * as users from "@/services/users";
 
 export async function GET() {
   try {
-    await requireRole("aux");
-    const list = await users.listUsers();
-    return jsonOk({ users: list });
+    const actor = await requireRole("member");
+    if (isFullAdmin(actor.role)) {
+      const list = await users.listUsers();
+      return jsonOk({ users: list });
+    }
+    const self = await users.getListedUser(actor.id);
+    return jsonOk({ users: self ? [self] : [] });
   } catch (e) {
     return jsonError(e);
   }

@@ -31,6 +31,32 @@ export async function listUsers() {
   }));
 }
 
+export async function getListedUser(userId: string) {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      invitedViaInvite: {
+        include: { createdBy: { select: { username: true } } }
+      }
+    }
+  });
+  if (!u) return null;
+  return {
+    id: u.id,
+    email: u.email,
+    username: u.username,
+    cityId: u.cityId,
+    discordId: u.discordId,
+    role: u.role,
+    roleLabel: formatRole(u.role),
+    org: u.org,
+    hiddenFromGoalTrackers: u.hiddenFromGoalTrackers,
+    mustResetPassword: u.mustResetPassword,
+    createdAt: u.createdAt,
+    invitedBy: u.invitedViaInvite?.createdBy?.username ?? null
+  };
+}
+
 export async function updateUser(params: {
   userId: string;
   actorUserId: string;

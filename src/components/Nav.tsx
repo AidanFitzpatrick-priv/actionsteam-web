@@ -40,12 +40,12 @@ export async function Nav() {
             <Link href="/stats">Stats</Link>
             <Link href="/goals/actions">Action goals</Link>
             <Link href="/guides">Guides</Link>
+            <Link href="/admin/users">Users</Link>
             {canCreateInvites(user.role) && <Link href="/admin/invites">Invites</Link>}
             {isFullAdmin(user.role) && (
               <>
                 <Link href="/admin/months">Months</Link>
                 <Link href="/admin/data">Action types</Link>
-                <Link href="/admin/users">Users</Link>
                 <Link href="/admin/tools">Tools</Link>
                 <Link href="/admin/audit">Audit</Link>
               </>

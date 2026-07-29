@@ -9,7 +9,8 @@ import {
   canEditUserRole,
   canEditUsername,
   canResetUserPassword,
-  formatRole
+  formatRole,
+  isFullAdmin
 } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
@@ -24,6 +25,12 @@ type UserRow = {
   mustResetPassword?: boolean;
 };
 
+function formatOrg(org: UserOrg | null): string {
+  if (org === "gang") return "Gang";
+  if (org === "pd") return "PD";
+  return "—";
+}
+
 export function AdminUsersClient({
   viewerRole,
   viewerUserId
@@ -36,7 +43,8 @@ export function AdminUsersClient({
   const [cityDraft, setCityDraft] = useState<Record<string, string>>({});
   const [discordDraft, setDiscordDraft] = useState<Record<string, string>>({});
   const assignableRoles = allowedRoleOptionsForActor(viewerRole);
-  const canEditNames = canEditUsername(viewerRole);
+  const canManageUsers = isFullAdmin(viewerRole);
+  const canEditNames = canManageUsers && canEditUsername(viewerRole);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/users");
@@ -70,7 +78,7 @@ export function AdminUsersClient({
   useEffect(() => { load(); }, [load]);
 
   useLiveSync({
-    admin: true,
+    admin: canManageUsers,
     onEvent: ev => {
       if (ev.type === "admin.updated") load();
     }
@@ -86,6 +94,7 @@ export function AdminUsersClient({
       org?: UserOrg | null;
     }
   ) {
+    if (!canManageUsers) return;
     const res = await fetch("/api/admin/users", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -99,6 +108,7 @@ export function AdminUsersClient({
   }
 
   async function removeUser(user: UserRow) {
+    if (!canManageUsers) return;
     if (!confirm(`Permanently delete ${user.username}? This cannot be undone.`)) return;
     const res = await fetch("/api/admin/users", {
       method: "DELETE",
@@ -113,6 +123,7 @@ export function AdminUsersClient({
   }
 
   async function resetPassword(user: UserRow) {
+    if (!canManageUsers) return;
     if (
       !confirm(
         `Force ${user.username} to set a new password on next login? They will be signed out immediately.`
@@ -149,21 +160,24 @@ export function AdminUsersClient({
   }
 
   const groupedUsers = useMemo(() => {
+    if (!canManageUsers) {
+      return [{ label: "Your account", users }];
+    }
     return ADMIN_USER_ROLE_GROUPS.map(g => ({
       label: g.label,
       users: users
         .filter(u => u.role === g.role)
         .sort((a, b) => a.username.localeCompare(b.username, undefined, { sensitivity: "base" }))
     })).filter(g => g.users.length > 0);
-  }, [users]);
+  }, [users, canManageUsers]);
 
-  const colCount = 7;
+  const colCount = canManageUsers ? 7 : 6;
 
   function renderUserRow(u: UserRow) {
-    const canEditRole = canEditUserRole(viewerRole, u.role);
-    const canRemove = u.id !== viewerUserId && canDeleteUser(viewerRole, u.role);
+    const canEditRole = canManageUsers && canEditUserRole(viewerRole, u.role);
+    const canRemove = canManageUsers && u.id !== viewerUserId && canDeleteUser(viewerRole, u.role);
     const canReset =
-      u.id !== viewerUserId && canResetUserPassword(viewerRole, u.role);
+      canManageUsers && u.id !== viewerUserId && canResetUserPassword(viewerRole, u.role);
     const roleOptions = canEditRole
       ? assignableRoles.includes(u.role)
         ? assignableRoles
@@ -192,22 +206,30 @@ export function AdminUsersClient({
         </td>
         <td className="email-cell" title={u.email}>{u.email}</td>
         <td>
-          <input
-            className="input field-fill"
-            value={cityDraft[u.id] ?? ""}
-            placeholder="City ID"
-            onChange={e => setCityDraft(d => ({ ...d, [u.id]: e.target.value }))}
-            onBlur={() => saveCityId(u.id)}
-          />
+          {canManageUsers ? (
+            <input
+              className="input field-fill"
+              value={cityDraft[u.id] ?? ""}
+              placeholder="City ID"
+              onChange={e => setCityDraft(d => ({ ...d, [u.id]: e.target.value }))}
+              onBlur={() => saveCityId(u.id)}
+            />
+          ) : (
+            u.cityId || "—"
+          )}
         </td>
         <td>
-          <input
-            className="input field-fill discord-field"
-            value={discordDraft[u.id] ?? ""}
-            placeholder="17–20 digits"
-            onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
-            onBlur={() => saveDiscord(u.id)}
-          />
+          {canManageUsers ? (
+            <input
+              className="input field-fill discord-field"
+              value={discordDraft[u.id] ?? ""}
+              placeholder="17–20 digits"
+              onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
+              onBlur={() => saveDiscord(u.id)}
+            />
+          ) : (
+            <span className="discord-field">{u.discordId || "—"}</span>
+          )}
         </td>
         <td>
           {canEditRole ? (
@@ -225,35 +247,41 @@ export function AdminUsersClient({
           )}
         </td>
         <td>
-          <select
-            className="select field-fill"
-            value={u.org ?? ""}
-            onChange={e => {
-              const value = e.target.value;
-              patch(u.id, { org: value === "" ? null : (value as UserOrg) });
-            }}
-          >
-            <option value="">—</option>
-            <option value="gang">Gang</option>
-            <option value="pd">PD</option>
-          </select>
-        </td>
-        <td className="actions-cell">
-          {canReset && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => resetPassword(u)}
+          {canManageUsers ? (
+            <select
+              className="select field-fill"
+              value={u.org ?? ""}
+              onChange={e => {
+                const value = e.target.value;
+                patch(u.id, { org: value === "" ? null : (value as UserOrg) });
+              }}
             >
-              Reset password
-            </button>
-          )}
-          {canRemove && (
-            <button type="button" className="btn btn-danger" onClick={() => removeUser(u)}>
-              Delete
-            </button>
+              <option value="">—</option>
+              <option value="gang">Gang</option>
+              <option value="pd">PD</option>
+            </select>
+          ) : (
+            formatOrg(u.org)
           )}
         </td>
+        {canManageUsers && (
+          <td className="actions-cell">
+            {canReset && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => resetPassword(u)}
+              >
+                Reset password
+              </button>
+            )}
+            {canRemove && (
+              <button type="button" className="btn btn-danger" onClick={() => removeUser(u)}>
+                Delete
+              </button>
+            )}
+          </td>
+        )}
       </tr>
     );
   }
@@ -269,7 +297,7 @@ export function AdminUsersClient({
             <th className="col-discord">Discord ID</th>
             <th className="col-role">Role</th>
             <th className="col-org">Org</th>
-            <th className="col-actions">Actions</th>
+            {canManageUsers && <th className="col-actions">Actions</th>}
           </tr>
         </thead>
         <tbody>

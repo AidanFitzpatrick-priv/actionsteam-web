@@ -6,15 +6,21 @@ import { AdminUsersClient } from "./AdminUsersClient";
 export default async function AdminUsersPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!isFullAdmin(user.role)) redirect("/");
+
+  const admin = isFullAdmin(user.role);
 
   return (
     <div className="container-users">
-      <h1>Users</h1>
+      <h1>{admin ? "Users" : "Your account"}</h1>
       <p className="muted">
-        Edit usernames, roles, and IDs, reset passwords, or permanently delete users below your rank. You cannot delete yourself or reset your own password here.
-        Only management can assign management. Management can hide cross-team accounts from goal score pages and
-        schedule/tracker dropdowns.
+        {admin ? (
+          <>
+            Edit usernames, roles, orgs, and IDs, reset passwords, or permanently delete users below your rank. You cannot delete yourself or reset your own password here.
+            Only management can assign management.
+          </>
+        ) : (
+          <>View your account details and org assignment (Gang or PD). Contact an aux+ if anything looks wrong.</>
+        )}
       </p>
       <AdminUsersClient viewerRole={user.role} viewerUserId={user.id} />
     </div>
