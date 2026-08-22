@@ -11,7 +11,9 @@ import {
   canManageGoalTrackerVisibility,
   canViewGoalScoreRow,
   shouldShowOnGoalTracker,
-  sortGoalTrackerRows
+  sortGoalTrackerRows,
+  canViewAllActionLogs,
+  canDeleteActionLog
 } from "@/lib/rbac";
 
 describe("canEditUserRole", () => {
@@ -195,5 +197,34 @@ describe("canViewGoalScoreRow", () => {
     expect(canViewGoalScoreRow("management", "management", false)).toBe(true);
     expect(canViewGoalScoreRow("management", "aux", false)).toBe(true);
     expect(canViewGoalScoreRow("adm", "member", false)).toBe(true);
+  });
+});
+
+describe("canViewAllActionLogs", () => {
+  it("allows aux and above", () => {
+    expect(canViewAllActionLogs("aux")).toBe(true);
+    expect(canViewAllActionLogs("adm")).toBe(true);
+    expect(canViewAllActionLogs("management")).toBe(true);
+  });
+
+  it("denies below aux", () => {
+    expect(canViewAllActionLogs("lead")).toBe(false);
+    expect(canViewAllActionLogs("sub_lead")).toBe(false);
+    expect(canViewAllActionLogs("member")).toBe(false);
+  });
+});
+
+describe("canDeleteActionLog", () => {
+  it("allows the author", () => {
+    expect(canDeleteActionLog({ id: "u1", role: "member" }, "u1")).toBe(true);
+  });
+
+  it("allows aux+ to delete others", () => {
+    expect(canDeleteActionLog({ id: "aux1", role: "aux" }, "u1")).toBe(true);
+  });
+
+  it("blocks members deleting others", () => {
+    expect(canDeleteActionLog({ id: "u1", role: "member" }, "u2")).toBe(false);
+    expect(canDeleteActionLog({ id: "u1", role: "lead" }, "u2")).toBe(false);
   });
 });

@@ -37,6 +37,7 @@ export async function Nav() {
                 <Link href={`/months/${activeMonth.slug}/br-tracker`}>BR Tracker</Link>
               </>
             )}
+            <Link href="/action-log">Action log</Link>
             <Link href="/stats">Stats</Link>
             <Link href="/goals/actions">Action goals</Link>
             <Link href="/guides">Guides</Link>

@@ -43,6 +43,7 @@ export default async function HomePage() {
         <div className="card">
           <h2>Quick links</h2>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
+            <li><Link href="/action-log">Action log</Link></li>
             <li><Link href="/stats">Action Stats</Link></li>
             <li><Link href="/goals/actions">Action goal scores</Link></li>
             {canCreateInvites(user.role) && <li><Link href="/admin/invites">Invite members</Link></li>}

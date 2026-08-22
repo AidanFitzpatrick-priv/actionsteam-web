@@ -74,3 +74,60 @@ export function parseTimeMinutes(raw: string | null | undefined): number {
   if (!m) return 9999;
   return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
 }
+
+/** YYYY-MM-DD in the given IANA zone (default Europe/London). */
+export function formatYmdInZone(d: Date, timeZone = "Europe/London"): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(d);
+}
+
+function tzOffsetMsAt(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).formatToParts(date);
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? "0";
+  const hourRaw = Number(get("hour"));
+  const hour = hourRaw === 24 ? 0 : hourRaw;
+  const asUtc = Date.UTC(
+    Number(get("year")),
+    Number(get("month")) - 1,
+    Number(get("day")),
+    hour,
+    Number(get("minute")),
+    Number(get("second"))
+  );
+  return asUtc - date.getTime();
+}
+
+function nextCalendarYmd(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + 1));
+  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-${String(next.getUTCDate()).padStart(2, "0")}`;
+}
+
+/** UTC instant of local midnight for a YYYY-MM-DD calendar date in `timeZone`. */
+export function zonedMidnightUtc(ymd: string, timeZone = "Europe/London"): Date {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const noonUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  const offset = tzOffsetMsAt(noonUtc, timeZone);
+  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0) - offset);
+}
+
+/** Inclusive start / exclusive end of the London calendar day containing `now`. */
+export function londonDayRangeUtc(now = new Date()): { start: Date; end: Date; ymd: string } {
+  const ymd = formatYmdInZone(now, "Europe/London");
+  const start = zonedMidnightUtc(ymd, "Europe/London");
+  const end = zonedMidnightUtc(nextCalendarYmd(ymd), "Europe/London");
+  return { start, end, ymd };
+}

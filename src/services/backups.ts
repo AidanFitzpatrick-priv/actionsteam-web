@@ -49,6 +49,7 @@ export async function runBackup(params?: { createdBy?: string; kind?: string }) 
     scheduleSlots: await prisma.scheduleSlot.findMany({ where: { deletedAt: null } }),
     trackerRows: await prisma.trackerRow.findMany({ where: { deletedAt: null } }),
     brTrackerRows: await prisma.brTrackerRow.findMany({ where: { deletedAt: null } }),
+    actionLogs: await prisma.actionLog.findMany({ where: { deletedAt: null } }),
     goalScores: await prisma.goalScore.findMany()
   };
 

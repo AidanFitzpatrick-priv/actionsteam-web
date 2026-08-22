@@ -79,6 +79,20 @@ export function canResetUserPassword(actorRole: UserRole, targetUserRole: UserRo
   return hasMinRole(actorRole, "aux") && roleLevel(targetUserRole) < roleLevel(actorRole);
 }
 
+/** Action log: aux+ see every submission. */
+export function canViewAllActionLogs(role: UserRole): boolean {
+  return hasMinRole(role, "aux");
+}
+
+/** Authors may delete their own log; aux+ may delete any. */
+export function canDeleteActionLog(
+  actor: { id: string; role: UserRole },
+  logUserId: string
+): boolean {
+  if (actor.id === logUserId) return true;
+  return canViewAllActionLogs(actor.role);
+}
+
 /** Goal scores: own row + everyone strictly below viewer rank; adm/management see all. */
 export function canViewGoalScoreRow(
   viewerRole: UserRole,

@@ -201,3 +201,16 @@ export async function publishInvitesChange(actorId: string) {
     actorId
   });
 }
+
+export async function publishActionLogChange(params: {
+  actorId: string;
+  action: "created" | "deleted";
+  logId: string;
+}) {
+  await publishLiveEvent({
+    type: params.action === "created" ? "action_log.created" : "action_log.deleted",
+    scope: "global",
+    entityId: params.logId,
+    actorId: params.actorId
+  });
+}

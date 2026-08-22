@@ -616,3 +616,88 @@ main:has(.tracker-page) {
 .guide-content a {
   color: var(--accent);
 }
+
+.action-log-layout {
+  display: grid;
+  grid-template-columns: 1.4fr 0.85fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+.action-log-form-narrow {
+  max-width: 560px;
+  margin-top: 16px;
+}
+@media (max-width: 860px) {
+  .action-log-layout { grid-template-columns: 1fr; }
+}
+.action-log-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.action-log-result-toggle {
+  display: flex;
+  gap: 8px;
+}
+.btn-toggle {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-toggle.is-positive {
+  border-color: var(--success);
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+.btn-toggle.is-negative {
+  border-color: var(--danger);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+.action-log-goal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.action-log-goal-head h2 { margin: 0; }
+.action-log-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.action-log-goal-table { margin-top: 8px; }
+.action-log-goal-foot { margin-top: 12px; }
+.action-log-list-card { margin-top: 16px; overflow: hidden; }
+.action-log-table-wrap { overflow-x: auto; margin-top: 8px; }
+.pill-positive, .pill-negative, .pill-met, .pill-missing {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.pill-positive, .pill-met {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.15);
+}
+.pill-negative, .pill-missing {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+}
+.btn-compact {
+  padding: 6px 10px;
+  font-size: 12px;
+}

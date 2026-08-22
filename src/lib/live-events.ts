@@ -11,7 +11,9 @@ export type LiveEventType =
   | "stats.updated"
   | "goals.updated"
   | "admin.updated"
-  | "invites.updated";
+  | "invites.updated"
+  | "action_log.created"
+  | "action_log.deleted";
 
 export type LiveEventScope = "month" | "global" | "admin" | "invites";
 
