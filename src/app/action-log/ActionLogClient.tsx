@@ -231,7 +231,7 @@ export function ActionLogClient() {
             </div>
             {result === "positive" ? (
               <div className="field">
-                <label htmlFor="action-log-number">If positive what was the action/numbers</label>
+                <label htmlFor="action-log-number">If positive what was the numbers</label>
                 <input
                   id="action-log-number"
                   className="input"
