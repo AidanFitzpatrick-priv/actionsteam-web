@@ -231,8 +231,13 @@ describe("canDeleteActionLog", () => {
     expect(canDeleteActionLog({ id: "u1", role: "member" }, "u1")).toBe(true);
   });
 
-  it("allows aux+ to delete others", () => {
-    expect(canDeleteActionLog({ id: "aux1", role: "aux" }, "u1")).toBe(true);
+  it("allows management to delete others", () => {
+    expect(canDeleteActionLog({ id: "m1", role: "management" }, "u1")).toBe(true);
+  });
+
+  it("blocks aux and adm from deleting others", () => {
+    expect(canDeleteActionLog({ id: "aux1", role: "aux" }, "u1")).toBe(false);
+    expect(canDeleteActionLog({ id: "adm1", role: "adm" }, "u1")).toBe(false);
   });
 
   it("blocks members deleting others", () => {

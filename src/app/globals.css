@@ -680,8 +680,15 @@ main:has(.tracker-page) {
 }
 .action-log-goal-table { margin-top: 8px; }
 .action-log-goal-foot { margin-top: 12px; }
-.action-log-list-card { margin-top: 16px; overflow: hidden; }
+.action-log-list-card { margin-top: 16px; }
 .action-log-table-wrap { overflow-x: auto; margin-top: 8px; }
+.action-log-table-wrap th:last-child,
+.action-log-table-wrap td:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--surface);
+  white-space: nowrap;
+}
 .pill-positive, .pill-negative, .pill-met, .pill-missing {
   display: inline-block;
   font-size: 12px;

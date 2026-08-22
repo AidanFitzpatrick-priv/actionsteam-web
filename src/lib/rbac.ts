@@ -96,13 +96,13 @@ export function canViewAllActionLogs(role: UserRole): boolean {
   return hasMinRole(role, "aux");
 }
 
-/** Authors may delete their own log; aux+ may delete any. */
+/** Authors may delete their own log; only management may delete someone else's. */
 export function canDeleteActionLog(
   actor: { id: string; role: UserRole },
   logUserId: string
 ): boolean {
   if (actor.id === logUserId) return true;
-  return canViewAllActionLogs(actor.role);
+  return actor.role === "management";
 }
 
 /** Goal scores: own row + everyone strictly below viewer rank; adm/management see all. */
