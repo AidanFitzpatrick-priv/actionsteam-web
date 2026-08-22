@@ -10,7 +10,8 @@ import {
   canEditUsername,
   canResetUserPassword,
   formatRole,
-  isFullAdmin
+  isFullAdmin,
+  isProtectedAdminAccount
 } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
@@ -175,7 +176,10 @@ export function AdminUsersClient({
 
   function renderUserRow(u: UserRow) {
     const canEditRole = canManageUsers && canEditUserRole(viewerRole, u.role);
-    const canRemove = canManageUsers && u.id !== viewerUserId && canDeleteUser(viewerRole, u.role);
+    const canRemove =
+      canManageUsers &&
+      u.id !== viewerUserId &&
+      canDeleteUser(viewerRole, u.role, u.username);
     const canReset =
       canManageUsers && u.id !== viewerUserId && canResetUserPassword(viewerRole, u.role);
     const roleOptions = canEditRole
@@ -187,7 +191,7 @@ export function AdminUsersClient({
     return (
       <tr key={u.id}>
         <td>
-          {canEditNames ? (
+          {canEditNames && !isProtectedAdminAccount(u.username) ? (
             <input
               className="input field-fill"
               value={usernameDraft[u.id] ?? ""}

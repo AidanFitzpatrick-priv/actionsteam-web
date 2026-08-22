@@ -69,9 +69,21 @@ export function canEditUsername(role: UserRole): boolean {
   return hasMinRole(role, "aux");
 }
 
-/** Admin → Users: aux+ may delete users strictly below their rank. */
-export function canDeleteUser(actorRole: UserRole, targetUserRole: UserRole): boolean {
-  return hasMinRole(actorRole, "aux") && roleLevel(targetUserRole) < roleLevel(actorRole);
+/** Admin → Users: aux+ may delete users strictly below their rank.
+ *  Management may also delete other management, except the protected `admin` account. */
+export function isProtectedAdminAccount(username: string): boolean {
+  return username.trim().toLowerCase() === "admin";
+}
+
+export function canDeleteUser(
+  actorRole: UserRole,
+  targetUserRole: UserRole,
+  targetUsername?: string
+): boolean {
+  if (targetUsername !== undefined && isProtectedAdminAccount(targetUsername)) return false;
+  if (!hasMinRole(actorRole, "aux")) return false;
+  if (actorRole === "management" && targetUserRole === "management") return true;
+  return roleLevel(targetUserRole) < roleLevel(actorRole);
 }
 
 /** Admin → Users: aux+ may force password reset for users strictly below their rank. */

@@ -65,15 +65,27 @@ describe("canAssignRole", () => {
 
 describe("canDeleteUser", () => {
   it("allows aux+ to delete strictly below rank", () => {
-    expect(canDeleteUser("aux", "member")).toBe(true);
-    expect(canDeleteUser("adm", "aux")).toBe(true);
-    expect(canDeleteUser("management", "adm")).toBe(true);
+    expect(canDeleteUser("aux", "member", "sam")).toBe(true);
+    expect(canDeleteUser("adm", "aux", "kai")).toBe(true);
+    expect(canDeleteUser("management", "adm", "ada")).toBe(true);
   });
 
   it("blocks same rank or higher", () => {
-    expect(canDeleteUser("aux", "aux")).toBe(false);
-    expect(canDeleteUser("aux", "adm")).toBe(false);
-    expect(canDeleteUser("lead", "member")).toBe(false);
+    expect(canDeleteUser("aux", "aux", "kai")).toBe(false);
+    expect(canDeleteUser("aux", "adm", "ada")).toBe(false);
+    expect(canDeleteUser("lead", "member", "sam")).toBe(false);
+    expect(canDeleteUser("adm", "management", "pat")).toBe(false);
+  });
+
+  it("allows management to delete other management", () => {
+    expect(canDeleteUser("management", "management", "pat")).toBe(true);
+  });
+
+  it("never allows deleting the protected admin account", () => {
+    expect(canDeleteUser("management", "management", "admin")).toBe(false);
+    expect(canDeleteUser("management", "management", "Admin")).toBe(false);
+    expect(canDeleteUser("adm", "management", "admin")).toBe(false);
+    expect(canDeleteUser("aux", "member", "admin")).toBe(false);
   });
 });
 

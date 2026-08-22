@@ -1,7 +1,7 @@
 import { UserOrg, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
-import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteUser, canManageGoalTrackerVisibility, canResetUserPassword } from "@/lib/rbac";
+import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteUser, canManageGoalTrackerVisibility, canResetUserPassword, isProtectedAdminAccount } from "@/lib/rbac";
 import { usernameSchema } from "@/lib/user-fields";
 import { publishUserGoalSync, removeUserFromGoalData, renameUserDisplayNameInSources, recalculateNonArchivedMonths } from "@/services/user-sync";
 
@@ -92,6 +92,9 @@ export async function updateUser(params: {
       throw new Error("You cannot edit usernames");
     }
     const username = usernameSchema.parse(params.username);
+    if (isProtectedAdminAccount(target.username) && username.toLowerCase() !== target.username.toLowerCase()) {
+      throw new Error("The admin account cannot be renamed");
+    }
     const taken = await prisma.user.findFirst({
       where: { username, NOT: { id: params.userId } }
     });
@@ -232,8 +235,8 @@ export async function deleteUser(params: {
     throw new Error("You cannot delete your own account");
   }
 
-  if (!canDeleteUser(params.actorRole, target.role)) {
-    throw new Error("You cannot delete someone at or above your rank");
+  if (!canDeleteUser(params.actorRole, target.role, target.username)) {
+    throw new Error("You cannot delete this account");
   }
 
   const deletedUsername = target.username;
