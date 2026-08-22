@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import type { UserRole } from "@prisma/client";
+import { GOAL_TRACKER_ROLE_GROUPS } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
 type ResultKind = "positive" | "negative";
@@ -21,7 +23,7 @@ type ActionLogRow = {
 
 type DailyGoal = {
   date: string;
-  rows: { staffName: string; met: boolean }[];
+  rows: { staffName: string; role: UserRole; met: boolean }[];
   metCount: number;
   total: number;
 };
@@ -88,6 +90,14 @@ export function ActionLogClient() {
       }
     }
   });
+
+  const groupedDailyGoal = useMemo(() => {
+    if (!dailyGoal) return [];
+    return GOAL_TRACKER_ROLE_GROUPS.map(g => ({
+      label: g.label,
+      rows: dailyGoal.rows.filter(r => r.role === g.role)
+    })).filter(g => g.rows.length > 0);
+  }, [dailyGoal]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -279,16 +289,23 @@ export function ActionLogClient() {
                 </tr>
               </thead>
               <tbody>
-                {dailyGoal.rows.map(row => (
-                  <tr key={row.staffName}>
-                    <td>{row.staffName}</td>
-                    <td>
-                      {row.met ? "1/1" : "0/1"}{" "}
-                      <span className={row.met ? "pill-met" : "pill-missing"}>
-                        {row.met ? "Met" : "Missing"}
-                      </span>
-                    </td>
-                  </tr>
+                {groupedDailyGoal.map(group => (
+                  <Fragment key={group.label}>
+                    <tr className="goal-group-heading">
+                      <td colSpan={2}>{group.label}</td>
+                    </tr>
+                    {group.rows.map(row => (
+                      <tr key={row.staffName}>
+                        <td>{row.staffName}</td>
+                        <td>
+                          {row.met ? "1/1" : "0/1"}{" "}
+                          <span className={row.met ? "pill-met" : "pill-missing"}>
+                            {row.met ? "Met" : "Missing"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

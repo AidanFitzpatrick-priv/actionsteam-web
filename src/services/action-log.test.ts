@@ -95,4 +95,20 @@ describe("buildDailyGoalRows", () => {
     expect(rows.find(r => r.staffName === "Aidan")?.met).toBe(true);
     expect(rows.find(r => r.staffName === "Sam")?.met).toBe(false);
   });
+
+  it("orders by Users rank groups then name, not by met status", () => {
+    const rows = buildDailyGoalRows(
+      [
+        { username: "Zed", role: "member", hiddenFromGoalTrackers: false },
+        { username: "Amy", role: "member", hiddenFromGoalTrackers: false },
+        { username: "Pat", role: "lead", hiddenFromGoalTrackers: false },
+        { username: "Kai", role: "aux", hiddenFromGoalTrackers: false },
+        { username: "Ada", role: "adm", hiddenFromGoalTrackers: false }
+      ],
+      new Set(["Zed", "Amy"])
+    );
+
+    expect(rows.map(r => r.staffName)).toEqual(["Ada", "Kai", "Pat", "Amy", "Zed"]);
+    expect(rows.map(r => r.role)).toEqual(["adm", "aux", "lead", "member", "member"]);
+  });
 });

@@ -1,7 +1,12 @@
 import { ActionLogResult, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ApiError } from "@/lib/api";
-import { canDeleteActionLog, canViewAllActionLogs, shouldShowOnGoalTracker } from "@/lib/rbac";
+import {
+  canDeleteActionLog,
+  canViewAllActionLogs,
+  GOAL_TRACKER_ROLE_GROUPS,
+  shouldShowOnGoalTracker
+} from "@/lib/rbac";
 import { londonDayRangeUtc } from "@/lib/dates";
 import { getDropdownOptions } from "@/services/reference-data";
 
@@ -22,6 +27,7 @@ export type ActionLogDto = {
 
 export type DailyGoalRow = {
   staffName: string;
+  role: UserRole;
   met: boolean;
 };
 
@@ -231,14 +237,18 @@ export function buildDailyGoalRows(
   users: { username: string; role: UserRole; hiddenFromGoalTrackers: boolean }[],
   loggedUsernames: Set<string>
 ): DailyGoalRow[] {
+  const order = new Map(GOAL_TRACKER_ROLE_GROUPS.map((g, i) => [g.role, i]));
   return users
     .filter(u => shouldShowOnGoalTracker(u.role, u.hiddenFromGoalTrackers))
     .map(u => ({
       staffName: u.username,
+      role: u.role,
       met: loggedUsernames.has(u.username)
     }))
     .sort((a, b) => {
-      if (a.met !== b.met) return a.met ? -1 : 1;
+      const ai = order.get(a.role) ?? 999;
+      const bi = order.get(b.role) ?? 999;
+      if (ai !== bi) return ai - bi;
       return a.staffName.localeCompare(b.staffName, undefined, { sensitivity: "base" });
     });
 }
