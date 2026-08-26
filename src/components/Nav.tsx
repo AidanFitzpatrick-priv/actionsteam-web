@@ -39,19 +39,18 @@ export async function Nav() {
             )}
             <Link href="/action-log">Action log</Link>
             <Link href="/stats">Stats</Link>
+            <Link href="/leaderboard">Leaderboard</Link>
             <Link href="/goals/actions">Action goals</Link>
-            <Link href="/guides">Guides</Link>
             <Link href="/admin/users">Users</Link>
             {canCreateInvites(user.role) && <Link href="/admin/invites">Invites</Link>}
             {isFullAdmin(user.role) && (
               <>
                 <Link href="/admin/months">Months</Link>
-                <Link href="/admin/data">Action types</Link>
-                <Link href="/admin/tools">Tools</Link>
+                <Link href="/admin/data">Types &amp; gangs</Link>
                 <Link href="/admin/audit">Audit</Link>
               </>
             )}
-            {canViewBackups(user.role) && <Link href="/admin/backups">Backups</Link>}
+            {canViewBackups(user.username) && <Link href="/admin/backups">Backups</Link>}
             <LogoutButton />
           </>
         ) : (

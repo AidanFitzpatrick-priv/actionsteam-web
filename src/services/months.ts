@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
-import { canHardDeleteMonth } from "@/lib/rbac";
 import { slugifyMonth } from "@/lib/names";
 import { parseMonthLabel } from "@/lib/schedule-calendar";
 import { seedScheduleSlotsForMonth } from "@/services/schedule-calendar";
@@ -72,6 +71,7 @@ export async function setActiveMonth(params: {
     action: "month.set_active",
     entityType: "month",
     entityId: month.id,
+    payload: { name: month.name },
     ipAddress: params.ipAddress
   });
 
@@ -96,33 +96,35 @@ export async function archiveMonth(params: {
     action: "month.archive",
     entityType: "month",
     entityId: month.id,
+    payload: { name: month.name },
     ipAddress: params.ipAddress
   });
 
   return updated;
 }
 
-export async function hardDeleteMonth(params: {
+export async function unarchiveMonth(params: {
   slug: string;
-  reason: string;
   actorUserId: string;
-  actorRole: import("@prisma/client").UserRole;
   ipAddress?: string | null;
 }) {
-  if (!canHardDeleteMonth(params.actorRole)) {
-    throw new Error("Only adm or management can hard delete a month");
-  }
   const month = await prisma.month.findUnique({ where: { slug: params.slug } });
   if (!month) throw new Error("Month not found");
+  if (!month.archivedAt) throw new Error("Month is not archived");
 
-  await prisma.month.delete({ where: { id: month.id } });
+  const updated = await prisma.month.update({
+    where: { id: month.id },
+    data: { archivedAt: null }
+  });
 
   await writeAuditLog({
     userId: params.actorUserId,
-    action: "month.hard_delete",
+    action: "month.unarchive",
     entityType: "month",
     entityId: month.id,
-    payload: { name: month.name, reason: params.reason },
+    payload: { name: month.name },
     ipAddress: params.ipAddress
   });
+
+  return updated;
 }

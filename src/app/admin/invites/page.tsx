@@ -11,9 +11,8 @@ export default async function AdminInvitesPage() {
   return (
     <div className="container-wide">
       <h1>Invite members</h1>
-      <p className="muted">Share sign-up links with your team. Each link tracks who sent it.</p>
       <div style={{ marginTop: 24 }}>
-        <InvitesAdminClient viewerRole={user.role} />
+        <InvitesAdminClient />
       </div>
     </div>
   );

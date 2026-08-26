@@ -18,9 +18,7 @@ import { useLiveSync } from "@/hooks/useLiveSync";
 type UserRow = {
   id: string;
   username: string;
-  email: string;
   cityId: string | null;
-  discordId: string | null;
   role: UserRole;
   org: UserOrg | null;
   mustResetPassword?: boolean;
@@ -34,15 +32,16 @@ function formatOrg(org: UserOrg | null): string {
 
 export function AdminUsersClient({
   viewerRole,
-  viewerUserId
+  viewerUserId,
+  viewerUsername
 }: {
   viewerRole: UserRole;
   viewerUserId: string;
+  viewerUsername: string;
 }) {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [usernameDraft, setUsernameDraft] = useState<Record<string, string>>({});
   const [cityDraft, setCityDraft] = useState<Record<string, string>>({});
-  const [discordDraft, setDiscordDraft] = useState<Record<string, string>>({});
   const assignableRoles = allowedRoleOptionsForActor(viewerRole);
   const canManageUsers = isFullAdmin(viewerRole);
   const canEditNames = canManageUsers && canEditUsername(viewerRole);
@@ -51,25 +50,19 @@ export function AdminUsersClient({
     const res = await fetch("/api/admin/users");
     const data = await res.json();
     if (res.ok) {
-      setUsers(data.users);
+      const listed = (data.users as UserRow[]).filter(u => !isProtectedAdminAccount(u.username));
+      setUsers(listed);
       setUsernameDraft(prev => {
         const next = { ...prev };
-        for (const u of data.users as UserRow[]) {
+        for (const u of listed) {
           if (next[u.id] === undefined) next[u.id] = u.username;
         }
         return next;
       });
       setCityDraft(prev => {
         const next = { ...prev };
-        for (const u of data.users as UserRow[]) {
+        for (const u of listed) {
           if (next[u.id] === undefined) next[u.id] = u.cityId ?? "";
-        }
-        return next;
-      });
-      setDiscordDraft(prev => {
-        const next = { ...prev };
-        for (const u of data.users as UserRow[]) {
-          if (next[u.id] === undefined) next[u.id] = u.discordId ?? "";
         }
         return next;
       });
@@ -91,7 +84,6 @@ export function AdminUsersClient({
       role?: UserRole;
       username?: string;
       cityId?: string | null;
-      discordId?: string | null;
       org?: UserOrg | null;
     }
   ) {
@@ -155,11 +147,6 @@ export function AdminUsersClient({
     await patch(userId, { cityId: raw || null });
   }
 
-  async function saveDiscord(userId: string) {
-    const raw = discordDraft[userId]?.trim();
-    await patch(userId, { discordId: raw || null });
-  }
-
   const groupedUsers = useMemo(() => {
     if (!canManageUsers) {
       return [{ label: "Your account", users }];
@@ -172,16 +159,19 @@ export function AdminUsersClient({
     })).filter(g => g.users.length > 0);
   }, [users, canManageUsers]);
 
-  const colCount = canManageUsers ? 7 : 6;
+  const colCount = canManageUsers ? 5 : 4;
 
   function renderUserRow(u: UserRow) {
-    const canEditRole = canManageUsers && canEditUserRole(viewerRole, u.role);
+    const canEditRole =
+      canManageUsers && canEditUserRole(viewerRole, u.role, u.username, viewerUsername);
     const canRemove =
       canManageUsers &&
       u.id !== viewerUserId &&
-      canDeleteUser(viewerRole, u.role, u.username);
+      canDeleteUser(viewerRole, u.role, u.username, viewerUsername);
     const canReset =
-      canManageUsers && u.id !== viewerUserId && canResetUserPassword(viewerRole, u.role);
+      canManageUsers &&
+      u.id !== viewerUserId &&
+      canResetUserPassword(viewerRole, u.role, u.username, viewerUsername);
     const roleOptions = canEditRole
       ? assignableRoles.includes(u.role)
         ? assignableRoles
@@ -208,7 +198,6 @@ export function AdminUsersClient({
             </span>
           )}
         </td>
-        <td className="email-cell" title={u.email}>{u.email}</td>
         <td>
           {canManageUsers ? (
             <input
@@ -220,19 +209,6 @@ export function AdminUsersClient({
             />
           ) : (
             u.cityId || "—"
-          )}
-        </td>
-        <td>
-          {canManageUsers ? (
-            <input
-              className="input field-fill discord-field"
-              value={discordDraft[u.id] ?? ""}
-              placeholder="17–20 digits"
-              onChange={e => setDiscordDraft(d => ({ ...d, [u.id]: e.target.value }))}
-              onBlur={() => saveDiscord(u.id)}
-            />
-          ) : (
-            <span className="discord-field">{u.discordId || "—"}</span>
           )}
         </td>
         <td>
@@ -296,9 +272,7 @@ export function AdminUsersClient({
         <thead>
           <tr>
             <th className="col-username">Username</th>
-            <th className="col-email">Email</th>
             <th className="col-city">City ID</th>
-            <th className="col-discord">Discord ID</th>
             <th className="col-role">Role</th>
             <th className="col-org">Org</th>
             {canManageUsers && <th className="col-actions">Actions</th>}

@@ -29,8 +29,9 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 420 }}>
-      <div className="card">
+    <div className="login-wrap">
+      <div className="login-card">
+        <p className="eyebrow">Actions Tracker</p>
         <h1>Forgot password</h1>
         <p className="muted">Enter your account email and we will send a reset link.</p>
         <form onSubmit={onSubmit}>
@@ -48,7 +49,7 @@ export default function ForgotPasswordPage() {
           </div>
           {error && <p className="error">{error}</p>}
           {message && <p className="success">{message}</p>}
-          <button type="submit" className="btn" style={{ width: "100%" }} disabled={submitting}>
+          <button type="submit" className="btn" disabled={submitting}>
             {submitting ? "Sending…" : "Send reset link"}
           </button>
         </form>

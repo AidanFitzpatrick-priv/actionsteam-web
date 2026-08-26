@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
-import { isFullAdmin } from "@/lib/rbac";
+import { isFullAdmin, isProtectedAdminAccount } from "@/lib/rbac";
 import { AdminUsersClient } from "./AdminUsersClient";
 
 export default async function AdminUsersPage() {
@@ -8,6 +8,7 @@ export default async function AdminUsersPage() {
   if (!user) redirect("/login");
 
   const admin = isFullAdmin(user.role);
+  const isAdminAccount = isProtectedAdminAccount(user.username);
 
   return (
     <div className="container-users">
@@ -15,14 +16,15 @@ export default async function AdminUsersPage() {
       <p className="muted">
         {admin ? (
           <>
-            Edit usernames, roles, orgs, and IDs, reset passwords, or permanently delete users below your rank. You cannot delete yourself or reset your own password here.
+            Edit usernames, roles, orgs, and city IDs, reset passwords, or permanently delete users below your rank. You cannot delete yourself or reset your own password here.
             Only management can assign management.
+            {isAdminAccount && " You can also delete, reset passwords, and change roles for other management members."}
           </>
         ) : (
           <>View your account details and org assignment (Gang or PD). Contact an aux+ if anything looks wrong.</>
         )}
       </p>
-      <AdminUsersClient viewerRole={user.role} viewerUserId={user.id} />
+      <AdminUsersClient viewerRole={user.role} viewerUserId={user.id} viewerUsername={user.username} />
     </div>
   );
 }

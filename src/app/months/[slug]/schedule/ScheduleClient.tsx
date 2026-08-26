@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateUKShort } from "@/lib/dates";
-import { SCHEDULE, scheduleTimeLabelForRow } from "@/lib/config";
+import { SCHEDULE_VISIBLE_ROW_INDICES, scheduleTimeLabelForRow } from "@/lib/config";
 import { useLiveSync, useEditingIds, liveFetchOpts } from "@/hooks/useLiveSync";
 
 const DAY_NAMES_FULL = [
@@ -121,7 +121,7 @@ function ScheduleSlotCell({
           className="select-compact schedule-field"
           value={slot.bookedBy ?? ""}
           aria-label="Booked by"
-          title="Booked by"
+          title={slot.bookedBy || "Booked by"}
           onFocus={() => onEditStart(slot.id)}
           onBlur={() => onEditEnd(slot.id)}
           onChange={e => onPatch(slot.id, { bookedBy: e.target.value || null })}
@@ -137,7 +137,7 @@ function ScheduleSlotCell({
           className="select-compact schedule-field"
           value={slot.orgName ?? ""}
           aria-label="Organisation"
-          title="Organisation"
+          title={slot.orgName || "Organisation"}
           onFocus={() => onEditStart(slot.id)}
           onBlur={() => onEditEnd(slot.id)}
           onChange={e => onPatch(slot.id, { orgName: e.target.value || null })}
@@ -210,13 +210,16 @@ export function ScheduleClient({
         });
       });
     }
+    if (data.dropdowns) setDropdowns(data.dropdowns);
+    if (data.calendar) setCalendar(data.calendar);
   }, [slug, editingIds]);
 
   useLiveSync({
     monthSlug: slug,
     selfUserId,
+    acceptOwnEventTypes: ["admin.updated"],
     onEvent: ev => {
-      if (ev.type === "schedule.updated") void refreshFromServer();
+      if (ev.type === "schedule.updated" || ev.type === "admin.updated") void refreshFromServer();
     }
   });
 
@@ -256,10 +259,7 @@ export function ScheduleClient({
     return calendar?.weeks.find(w => w.weekIndex === week)?.days ?? [];
   }, [calendar, week]);
 
-  const rowIndices = useMemo(
-    () => Array.from({ length: SCHEDULE.DATA_ROWS }, (_, i) => i),
-    []
-  );
+  const rowIndices = useMemo(() => [...SCHEDULE_VISIBLE_ROW_INDICES], []);
 
   const timeColumnLabels = useMemo(() => {
     return rowIndices.map(rowIdx => {
@@ -298,9 +298,6 @@ export function ScheduleClient({
         <h1>
           {calendar.monthName} {calendar.year} — Actions Schedule
         </h1>
-        <p className="muted">
-          Week {week + 1}. Action dates on the left; times in column headers.
-        </p>
         {toast && <p className="success">{toast}</p>}
       </div>
 

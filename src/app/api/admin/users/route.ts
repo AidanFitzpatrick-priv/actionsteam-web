@@ -37,10 +37,11 @@ export async function PATCH(req: NextRequest) {
       .parse(await req.json());
     const meta = getMeta(req);
 
-    const updated = await users.updateUser({
+    await users.updateUser({
       userId: body.userId,
       actorUserId: actor.id,
       actorRole: actor.role,
+      actorUsername: actor.username,
       role: body.role,
       username: body.username,
       cityId: body.cityId,
@@ -52,7 +53,8 @@ export async function PATCH(req: NextRequest) {
 
     await publishAdminChange(actor.id, "users");
 
-    return jsonOk({ user: updated });
+    const listed = await users.getListedUser(body.userId);
+    return jsonOk({ user: listed });
   } catch (e) {
     return jsonError(e);
   }
@@ -68,6 +70,7 @@ export async function DELETE(req: NextRequest) {
       userId: body.userId,
       actorUserId: actor.id,
       actorRole: actor.role,
+      actorUsername: actor.username,
       ipAddress: meta.ipAddress
     });
 
@@ -94,6 +97,7 @@ export async function POST(req: NextRequest) {
       userId: body.userId,
       actorUserId: actor.id,
       actorRole: actor.role,
+      actorUsername: actor.username,
       ipAddress: meta.ipAddress
     });
 

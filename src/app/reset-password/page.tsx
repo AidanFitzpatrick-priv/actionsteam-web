@@ -60,12 +60,12 @@ function ResetPasswordForm() {
     router.refresh();
   }
 
-  if (loading) return <p className="muted container">Loading…</p>;
+  if (loading) return <p className="muted login-wrap">Loading…</p>;
 
   if (isEmailReset && !tokenValid) {
     return (
-      <div className="container" style={{ maxWidth: 420 }}>
-        <div className="card">
+      <div className="login-wrap">
+        <div className="login-card">
           <h1>Reset link expired</h1>
           <p className="muted">This password reset link is invalid or has expired.</p>
           <p style={{ marginTop: 16 }}>
@@ -77,8 +77,9 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 420 }}>
-      <div className="card">
+    <div className="login-wrap">
+      <div className="login-card">
+        <p className="eyebrow">Actions Tracker</p>
         <h1>Set a new password</h1>
         <p className="muted">
           {isEmailReset
@@ -113,7 +114,7 @@ function ResetPasswordForm() {
             />
           </div>
           {error && <p className="error">{error}</p>}
-          <button type="submit" className="btn" style={{ width: "100%" }}>
+          <button type="submit" className="btn">
             Save password
           </button>
         </form>
@@ -129,7 +130,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<p className="muted container">Loading…</p>}>
+    <Suspense fallback={<p className="muted login-wrap">Loading…</p>}>
       <ResetPasswordForm />
     </Suspense>
   );

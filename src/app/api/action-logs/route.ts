@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       action: "action_log.create",
       entityType: "action_log",
       entityId: log.id,
+      payload: { orgName: log.orgName, actionText: log.actionText, result: log.result },
       ipAddress: getMeta(req).ipAddress
     });
 

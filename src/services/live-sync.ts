@@ -188,7 +188,7 @@ export async function publishScheduleDerivedUpdates(params: {
 export async function publishAdminChange(actorId: string, detail?: string) {
   await publishLiveEvent({
     type: "admin.updated",
-    scope: "admin",
+    scope: "global",
     actorId,
     payload: detail ? { detail } : undefined
   });

@@ -58,6 +58,16 @@ function winnerOptionsForRow(row: Row): string[] {
   return buildActionWinnerOptions(row.org1Name, row.org2Name, row.actionWinner);
 }
 
+/** Allowed statuses plus a stored legacy value so old rows still display. */
+function statusOptionsForRow(allowed: string[], current?: string): string[] {
+  const options = [...allowed];
+  const trimmed = current?.trim();
+  if (trimmed && !allowed.some(o => o.toLowerCase() === trimmed.toLowerCase())) {
+    options.push(trimmed);
+  }
+  return options;
+}
+
 function canPickWinner(row: Row): boolean {
   return Boolean(row.org1Name?.trim() && row.org2Name?.trim());
 }
@@ -325,16 +335,19 @@ export function TrackerClient({
     } else {
       mergeRemoteRows(data.rows);
     }
+    if (data.dropdowns) setDropdowns(data.dropdowns);
   }, [slug, mergeRemoteRows, editingIds]);
 
   useLiveSync({
     monthSlug: slug,
     selfUserId,
+    acceptOwnEventTypes: ["admin.updated"],
     onEvent: ev => {
       if (
         ev.type === "tracker.updated" ||
         ev.type === "tracker.added" ||
-        ev.type === "tracker.deleted"
+        ev.type === "tracker.deleted" ||
+        ev.type === "admin.updated"
       ) {
         void refreshFromServer();
       }
@@ -411,10 +424,6 @@ export function TrackerClient({
           {monthName}
           {titleYear} — Actions Tracker
         </h1>
-        <p className="muted">
-          Add rows manually and fill in each action. Winner = ORG 1, ORG 2, or N/A (N/A sets
-          headcounts to N/A).
-        </p>
         {toast && <p className="success">{toast}</p>}
       </div>
 
@@ -497,8 +506,8 @@ export function TrackerClient({
                           updateRow(row.id, { status: e.target.value ? [e.target.value] : [] })
                         }
                       >
-                        <option value="">—</option>
-                        {dropdowns.statusOptions.map(s => (
+                        {!(row.status[0]?.trim()) && <option value="">—</option>}
+                        {statusOptionsForRow(dropdowns.statusOptions, row.status[0]).map(s => (
                           <option key={s} value={s}>
                             {s}
                           </option>

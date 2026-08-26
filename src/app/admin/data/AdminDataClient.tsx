@@ -3,20 +3,19 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useLiveSync } from "@/hooks/useLiveSync";
 
-type Tab = "types" | "gangs" | "staff";
+type Tab = "types" | "gangs";
 type ActionTypeKind = "action" | "br";
 
 const TAB_LABELS: Record<Tab, string> = {
-  types: "Action types",
-  gangs: "Gangs",
-  staff: "Staff"
+  types: "Types",
+  gangs: "Gangs"
 };
 
 export function AdminDataClient() {
   const [tab, setTab] = useState<Tab>("types");
   const [items, setItems] = useState<Array<Record<string, unknown>>>([]);
   const [name, setName] = useState("");
-  const [extra, setExtra] = useState("");
+  const [colour, setColour] = useState("#fce5cd");
   const [typeKind, setTypeKind] = useState<ActionTypeKind>("action");
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -30,7 +29,7 @@ export function AdminDataClient() {
     load();
     setEditingId(null);
     setName("");
-    setExtra("");
+    setColour("#fce5cd");
     setTypeKind("action");
   }, [load, tab]);
 
@@ -44,17 +43,16 @@ export function AdminDataClient() {
   function startEdit(item: Record<string, unknown>) {
     setEditingId(String(item.id));
     setName(String(item.name));
-    if (tab === "staff") setExtra(String(item.rank ?? ""));
-    else if (tab === "types") {
-      setExtra(String(item.colourHex ?? "#ffffff"));
+    if (tab === "types") {
+      setColour(String(item.colourHex ?? "#ffffff"));
       setTypeKind((item.kind as ActionTypeKind) ?? "action");
-    } else setExtra(item.org2Eligible ? "true" : "false");
+    }
   }
 
   function cancelEdit() {
     setEditingId(null);
     setName("");
-    setExtra("");
+    setColour("#fce5cd");
     setTypeKind("action");
   }
 
@@ -66,12 +64,10 @@ export function AdminDataClient() {
       name: name.trim()
     };
     if (editingId) body.id = editingId;
-    if (tab === "staff") body.rank = extra.trim() || null;
     if (tab === "types") {
-      body.colourHex = extra.trim() || "#ffffff";
+      body.colourHex = colour.trim() || "#ffffff";
       body.kind = typeKind;
     }
-    if (tab === "gangs") body.org2Eligible = extra !== "false";
 
     const res = await fetch("/api/admin/data", {
       method: "POST",
@@ -102,7 +98,7 @@ export function AdminDataClient() {
   return (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {(["types", "gangs", "staff"] as Tab[]).map(t => (
+        {(["types", "gangs"] as Tab[]).map(t => (
           <button
             key={t}
             type="button"
@@ -115,9 +111,9 @@ export function AdminDataClient() {
       </div>
 
       <div className="card" style={{ marginBottom: 24 }}>
-        <form onSubmit={save} className="grid-2">
+        <form onSubmit={save} className={tab === "types" ? "grid-2" : undefined}>
           <div className="field">
-            <label htmlFor="data-name">{tab === "types" ? "Action type name" : "Name"}</label>
+            <label htmlFor="data-name">{tab === "types" ? "Type name" : "Gang name"}</label>
             <input
               id="data-name"
               className="input"
@@ -126,61 +122,47 @@ export function AdminDataClient() {
               required
             />
           </div>
-          <div className="field">
-            <label htmlFor="data-extra">
-              {tab === "staff"
-                ? "Rank"
-                : tab === "types"
-                  ? "Colour"
-                  : "ORG2 eligible (true/false)"}
-            </label>
-            {tab === "types" ? (
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input
-                  id="data-extra"
-                  className="input"
-                  value={extra}
-                  onChange={e => setExtra(e.target.value)}
-                  placeholder="#fce5cd"
-                  required
-                />
-                <span
-                  aria-hidden
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 4,
-                    border: "1px solid var(--border)",
-                    background: extra.trim() || "#ffffff",
-                    flexShrink: 0
-                  }}
-                />
-              </div>
-            ) : (
-              <input
-                id="data-extra"
-                className="input"
-                value={extra}
-                onChange={e => setExtra(e.target.value)}
-                placeholder={tab === "gangs" ? "true" : ""}
-              />
-            )}
-          </div>
           {tab === "types" && (
-            <div className="field">
-              <label htmlFor="data-kind">Kind</label>
-              <select
-                id="data-kind"
-                className="input"
-                value={typeKind}
-                onChange={e => setTypeKind(e.target.value as ActionTypeKind)}
-              >
-                <option value="action">Action (schedule + action tracker)</option>
-                <option value="br">BR (BR tracker only)</option>
-              </select>
-            </div>
+            <>
+              <div className="field">
+                <label htmlFor="data-colour">Colour</label>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    id="data-colour"
+                    className="input"
+                    value={colour}
+                    onChange={e => setColour(e.target.value)}
+                    placeholder="#fce5cd"
+                    required
+                  />
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 4,
+                      border: "1px solid var(--border)",
+                      background: colour.trim() || "#ffffff",
+                      flexShrink: 0
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="data-kind">Kind</label>
+                <select
+                  id="data-kind"
+                  className="input"
+                  value={typeKind}
+                  onChange={e => setTypeKind(e.target.value as ActionTypeKind)}
+                >
+                  <option value="action">Action</option>
+                  <option value="br">BR</option>
+                </select>
+              </div>
+            </>
           )}
-          <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}>
+          <div style={{ gridColumn: tab === "types" ? "1 / -1" : undefined, display: "flex", gap: 8, marginTop: tab === "gangs" ? 12 : 0 }}>
             <button type="submit" className="btn">
               {editingId ? "Save changes" : "Add"}
             </button>
@@ -198,17 +180,15 @@ export function AdminDataClient() {
           <thead>
             <tr>
               <th>Name</th>
-              <th>Details</th>
+              {tab === "types" && <th>Kind</th>}
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {items.map(item => (
               <tr key={String(item.id)}>
-                <td>{String(item.name)}</td>
-                <td className="muted">
-                  {tab === "staff" && String(item.rank ?? "—")}
-                  {tab === "types" && (
+                <td>
+                  {tab === "types" ? (
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                       <span
                         aria-hidden
@@ -220,13 +200,15 @@ export function AdminDataClient() {
                           background: String(item.colourHex)
                         }}
                       />
-                      {String(item.colourHex)}
-                      {" · "}
-                      {item.kind === "br" ? "BR" : "Action"}
+                      {String(item.name)}
                     </span>
+                  ) : (
+                    String(item.name)
                   )}
-                  {tab === "gangs" && (item.org2Eligible ? "ORG2 ✓" : "ORG2 ✗")}
                 </td>
+                {tab === "types" && (
+                  <td className="muted">{item.kind === "br" ? "BR" : "Action"}</td>
+                )}
                 <td style={{ whiteSpace: "nowrap" }}>
                   <button
                     type="button"

@@ -3,6 +3,7 @@
  * Gang attendance Total only when Status is set (buildGangAttendanceTable_).
  */
 import { normalizeStatus } from "@/lib/names";
+import { parseMonthLabel, resolveMonthYear } from "@/lib/schedule-calendar";
 
 export type StatsRow = {
   type: string;
@@ -185,5 +186,106 @@ export function buildAllStatsTables(rows: StatsRow[], mostPlayedRows: StatsRow[]
     statusPct: buildStatusPctTable(real),
     mostPlayed: buildMostPlayedTable(mostPlayedRows),
     gangAttendance: buildGangAttendanceTable(real)
+  };
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+] as const;
+
+export function previousMonthKey(month: {
+  name: string;
+  year?: number | null;
+  createdAt: Date;
+}): { name: string; year: number } | null {
+  try {
+    const year = resolveMonthYear(month);
+    const parsed = parseMonthLabel(month.name, year);
+    const monthIndex = parsed.monthIndex === 0 ? 11 : parsed.monthIndex - 1;
+    const prevYear = parsed.monthIndex === 0 ? parsed.year - 1 : parsed.year;
+    return { name: MONTH_NAMES[monthIndex], year: prevYear };
+  } catch {
+    return null;
+  }
+}
+
+export function monthMatchesKey(
+  month: { name: string; year?: number | null; createdAt: Date },
+  key: { name: string; year: number }
+): boolean {
+  try {
+    const year = resolveMonthYear(month);
+    const parsed = parseMonthLabel(month.name, year);
+    return parsed.displayName === key.name && parsed.year === key.year;
+  } catch {
+    return false;
+  }
+}
+
+export function rowDate(raw: unknown): Date | null {
+  if (!raw) return null;
+  if (raw instanceof Date) return Number.isNaN(raw.getTime()) ? null : raw;
+  const d = new Date(String(raw));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+export type StatsOverview = {
+  total: number;
+  withStatus: number;
+  completed: number;
+  pdNoShow: number;
+  gangNoShow: number;
+  pending: number;
+  undated: number;
+  completionPct: number;
+  lastMonthTotal: number | null;
+};
+
+export function summarizeStatus(rows: StatsRow[]) {
+  let completed = 0;
+  let pdNoShow = 0;
+  let gangNoShow = 0;
+  let pending = 0;
+  let withStatus = 0;
+  let undated = 0;
+
+  for (const r of rows) {
+    if (!rowDate(r.date)) undated++;
+    const st = normalizeStatus(r.status);
+    if (!st.size) {
+      pending++;
+      continue;
+    }
+    withStatus++;
+    if (st.has("completed")) completed++;
+    if (st.has("pd didn't attend") || st.has("org 2 didn't attend") || st.has("actions didn't attend")) {
+      pdNoShow++;
+    }
+    if (st.has("gang didn't attend") || st.has("org 1 didn't attend")) {
+      gangNoShow++;
+    }
+  }
+
+  return { completed, pdNoShow, gangNoShow, pending, withStatus, undated };
+}
+
+export function buildOverview(
+  rows: StatsRow[],
+  opts: {
+    lastMonthTotal?: number | null;
+  } = {}
+): StatsOverview {
+  const real = rows.filter(isRealActionRow);
+  const status = summarizeStatus(real);
+  const completionPct = status.withStatus
+    ? Math.round((status.completed / status.withStatus) * 10000) / 100
+    : 0;
+
+  return {
+    total: real.length,
+    ...status,
+    completionPct,
+    lastMonthTotal: opts.lastMonthTotal ?? null
   };
 }

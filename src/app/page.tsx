@@ -15,10 +15,11 @@ export default async function HomePage() {
 
   return (
     <div className="container-wide">
+      <p className="eyebrow">Actions Tracker</p>
       <h1>Welcome, {user.username}</h1>
-      <p className="muted">Actions schedule, tracker, stats, and goal scores.</p>
+      <p className="lede">Actions schedule, tracker, stats, and goal scores.</p>
 
-      <div className="grid-2" style={{ marginTop: 24 }}>
+      <div className="grid-2" style={{ marginTop: 8 }}>
         <div className="card">
           <h2>Schedule &amp; Tracker</h2>
           {activeMonth ? (
@@ -45,6 +46,7 @@ export default async function HomePage() {
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             <li><Link href="/action-log">Action log</Link></li>
             <li><Link href="/stats">Action Stats</Link></li>
+            <li><Link href="/leaderboard">Leaderboard</Link></li>
             <li><Link href="/goals/actions">Action goal scores</Link></li>
             {canCreateInvites(user.role) && <li><Link href="/admin/invites">Invite members</Link></li>}
           </ul>

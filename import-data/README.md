@@ -1,6 +1,6 @@
 # Sheet import data
 
-CSV exports from Google Sheets, used by `npm run import:schedule` and **Admin → Tools → Import June schedule**.
+CSV exports from Google Sheets, used by `npm run import:schedule`.
 
 | File | Source sheet |
 |------|----------------|
@@ -23,4 +23,3 @@ Import into production (Railway Console):
 npm run import:schedule -- import-data/june-schedule.csv --month June --set-active
 ```
 
-Or use **Admin → Tools** on the live site (aux+).

@@ -1,6 +1,6 @@
 /**
  * Import schedule + reference data from CSV (Sheet export format).
- * Used by scripts/import-schedule.ts and admin tools API.
+ * Used by scripts/import-schedule.ts.
  */
 import { readFileSync, existsSync } from "fs";
 import path from "path";

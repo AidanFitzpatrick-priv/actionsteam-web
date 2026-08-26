@@ -10,8 +10,7 @@ export default async function AdminDataPage() {
 
   return (
     <div className="container-wide">
-      <h1>Action types &amp; reference data</h1>
-      <p className="muted">Manage action types, gangs, and staff names used in schedule and tracker dropdowns.</p>
+      <h1>Types &amp; gangs</h1>
       <AdminDataClient />
     </div>
   );

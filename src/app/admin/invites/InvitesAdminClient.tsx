@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { canViewAllInvites } from "@/lib/rbac";
 import { useLiveSync } from "@/hooks/useLiveSync";
 import type { UserRole } from "@prisma/client";
 
@@ -14,7 +13,7 @@ type InviteRow = {
   usedBy: { username: string; at: string } | null;
 };
 
-export function InvitesAdminClient({ viewerRole }: { viewerRole: UserRole }) {
+export function InvitesAdminClient() {
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -77,11 +76,6 @@ export function InvitesAdminClient({ viewerRole }: { viewerRole: UserRole }) {
     <div>
       <div className="card" style={{ marginBottom: 24 }}>
         <h2>Create invite link</h2>
-        <p className="muted">
-          {canViewAllInvites(viewerRole)
-            ? "You see all team invites (aux+). New sign-ups are always members."
-            : "You see invites you created. New sign-ups are always members."}
-        </p>
         <form onSubmit={createInvite} style={{ marginTop: 16 }}>
           <button type="submit" className="btn">Create invite link</button>
         </form>

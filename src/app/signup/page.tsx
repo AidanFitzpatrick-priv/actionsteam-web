@@ -50,8 +50,9 @@ function SignupForm() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 420 }}>
-      <div className="card">
+    <div className="login-wrap">
+      <div className="login-card">
+        <p className="eyebrow">Actions Tracker</p>
         <h1>Create account</h1>
         {validating && <p className="muted">Checking invite…</p>}
         {invitedBy && <p className="muted">Invited by <strong>{invitedBy}</strong></p>}
@@ -77,7 +78,7 @@ function SignupForm() {
             <input id="passwordConfirm" className="input" type="password" value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)} required />
           </div>
           {error && <p className="error">{error}</p>}
-          <button type="submit" className="btn" style={{ width: "100%" }} disabled={!inviteToken || validating}>
+          <button type="submit" className="btn" disabled={!inviteToken || validating}>
             Sign up
           </button>
         </form>
@@ -91,7 +92,7 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<div className="container"><p className="muted">Loading…</p></div>}>
+    <Suspense fallback={<div className="login-wrap"><p className="muted">Loading…</p></div>}>
       <SignupForm />
     </Suspense>
   );

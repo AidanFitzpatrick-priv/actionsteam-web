@@ -28,9 +28,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 420 }}>
-      <div className="card">
-        <h1>Log in</h1>
+    <div className="login-wrap">
+      <div className="login-card">
+        <p className="eyebrow">Actions Tracker</p>
+        <h1>Sign in</h1>
         <p className="muted">Use your email or username.</p>
         <form onSubmit={onSubmit}>
           <div className="field">
@@ -42,7 +43,7 @@ export default function LoginPage() {
             <input id="password" className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
           </div>
           {error && <p className="error">{error}</p>}
-          <button type="submit" className="btn" style={{ width: "100%" }}>Log in</button>
+          <button type="submit" className="btn">Log in</button>
         </form>
         <p className="muted" style={{ marginTop: 16 }}>
           <Link href="/forgot-password">Forgot password?</Link>

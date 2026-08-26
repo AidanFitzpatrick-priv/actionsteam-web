@@ -9,7 +9,10 @@ export const REFRESH_COOKIE = "actions_refresh";
 const SESSION_HOURS = 24;
 const REFRESH_DAYS = 7;
 
-export type SessionUser = Pick<User, "id" | "email" | "username" | "role" | "disabledAt" | "mustResetPassword">;
+export type SessionUser = Pick<
+  User,
+  "id" | "email" | "username" | "role" | "disabledAt" | "mustResetPassword" | "avatarUpdatedAt"
+>;
 
 export async function createSession(
   userId: string,
@@ -51,7 +54,8 @@ export async function getSessionUser(sessionToken: string | undefined): Promise<
     username: session.user.username,
     role: session.user.role,
     disabledAt: session.user.disabledAt,
-    mustResetPassword: session.user.mustResetPassword
+    mustResetPassword: session.user.mustResetPassword,
+    avatarUpdatedAt: session.user.avatarUpdatedAt
   };
 }
 

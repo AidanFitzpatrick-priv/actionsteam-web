@@ -1,10 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { UserRole } from "@prisma/client";
-import { GOAL_TRACKER_ROLE_GROUPS } from "@/lib/rbac";
-import { goalMet } from "@/lib/goals";
+import { WEEKLY_ACTION_GOAL, goalMet, teamGoalScores } from "@/lib/goals";
 import { useLiveSync } from "@/hooks/useLiveSync";
+import {
+  CHART_COLORS,
+  GoalBarChart,
+  GoalLineChart,
+  GoalRing,
+  WeekBars,
+  dayLabel
+} from "./GoalVisuals";
 
 type WeekColumn = { dayIndex: number; date: string };
 
@@ -21,7 +28,20 @@ type ScoreRow = {
   role: UserRole;
   points: number[];
   total: number;
+  isSelf?: boolean;
 };
+
+type GoalsPayload = {
+  weekColumns: WeekColumn[];
+  scores: ScoreRow[];
+  selfScore?: ScoreRow;
+  month?: { name: string; slug: string; isActive: boolean; year?: number | null } | null;
+  goal?: number;
+  canViewTeam?: boolean;
+  selfName?: string;
+};
+
+const DAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function monthLabel(m: MonthOption): string {
   const year = m.year ? ` ${m.year}` : "";
@@ -30,14 +50,11 @@ function monthLabel(m: MonthOption): string {
 }
 
 export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) {
-  const [data, setData] = useState<{
-    weekColumns: WeekColumn[];
-    scores: ScoreRow[];
-    month?: { name: string; slug: string; isActive: boolean; year?: number | null } | null;
-  } | null>(null);
+  const [data, setData] = useState<GoalsPayload | null>(null);
   const [months, setMonths] = useState<MonthOption[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string>("");
   const [selfUserId, setSelfUserId] = useState<string | undefined>();
+  const [focusName, setFocusName] = useState("");
 
   useEffect(() => {
     if (!monthPicker) return;
@@ -74,7 +91,9 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
   useEffect(() => {
     fetch("/api/auth/me")
       .then(r => r.json())
-      .then(d => { if (d.user?.id) setSelfUserId(d.user.id); })
+      .then(d => {
+        if (d.user?.id) setSelfUserId(d.user.id);
+      })
       .catch(() => {});
   }, []);
 
@@ -86,22 +105,41 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
     }
   });
 
-  const groupedScores = useMemo(() => {
-    if (!data) return [];
-    return GOAL_TRACKER_ROLE_GROUPS.map(g => ({
-      label: g.label,
-      rows: data.scores.filter(s => s.role === g.role)
-    })).filter(g => g.rows.length > 0);
+  const goal = data?.goal ?? WEEKLY_ACTION_GOAL;
+  const selfRow = useMemo(() => {
+    if (!data) return null;
+    return (
+      data.selfScore ??
+      data.scores.find(s => s.isSelf) ?? {
+        staffName: data.selfName ?? "You",
+        role: "member" as UserRole,
+        points: data.weekColumns.map(() => 0),
+        total: 0,
+        isSelf: true
+      }
+    );
   }, [data]);
 
-  if (!data) return <p className="muted">Loading…</p>;
+  const remaining = selfRow ? Math.max(0, goal - selfRow.total) : goal;
 
-  const weekColumns = data.weekColumns;
-  const colCount = weekColumns.length + 3;
+  if (!data || !selfRow) return <p className="muted">Loading…</p>;
+
+  const teamScores = teamGoalScores(data.scores);
+  const labels = data.weekColumns.map(c => dayLabel(c.dayIndex, c.date));
+  const shortLabels = data.weekColumns.map(c => DAYS_SHORT[c.dayIndex] ?? c.date);
+  const teamDaily = data.weekColumns.map((_, i) =>
+    teamScores.reduce((sum, row) => sum + (row.points[i] ?? 0), 0)
+  );
+  const focusRow = focusName ? teamScores.find(s => s.staffName === focusName) : null;
+  const lineSeries = focusRow
+    ? [{ name: focusRow.staffName, color: CHART_COLORS[0], values: focusRow.points }]
+    : [{ name: "Whole team", color: CHART_COLORS[0], values: teamDaily }];
+  const hitCount = teamScores.filter(s => goalMet(s.total)).length;
 
   return (
-    <div>
-      <h1>Action goal scores</h1>
+    <div className="goals-page">
+      <p className="eyebrow">This week</p>
+      <h1>Action goals</h1>
       {monthPicker && months.length > 0 && (
         <div className="field" style={{ maxWidth: 280, marginTop: 12 }}>
           <label htmlFor="goals-month">Month</label>
@@ -119,50 +157,96 @@ export function GoalsClient({ monthPicker = false }: { monthPicker?: boolean }) 
           </select>
         </div>
       )}
-      <p className="muted">
-        Weekly points for days in the current schedule week. You see your row and everyone below your rank. Updates live.
-        {monthPicker && data.month && !data.month.isActive && (
-          <> Viewing <strong>{data.month.name}</strong> (not the active month).</>
-        )}
-      </p>
-      <div className="card" style={{ marginTop: 16, overflowX: "auto" }}>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Staff</th>
-              {weekColumns.map(col => (
-                <th key={col.dayIndex}>{col.date}</th>
-              ))}
-              <th>Total</th>
-              <th>Goal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {groupedScores.map(group => (
-              <Fragment key={group.label}>
-                <tr className="goal-group-heading">
-                  <td colSpan={colCount}>{group.label}</td>
-                </tr>
-                {group.rows.map(s => (
-                  <tr key={s.staffName}>
-                    <td>{s.staffName}</td>
-                    {s.points.map((p, i) => (
-                      <td key={weekColumns[i]?.dayIndex ?? i}>{p}</td>
-                    ))}
-                    <td><strong>{s.total}</strong></td>
-                    <td
-                      className={goalMet(s.total) ? "goal-met" : "goal-not-met"}
-                      aria-label={goalMet(s.total) ? "Goal met" : "Goal not met"}
-                    >
-                      {goalMet(s.total) ? "✓" : "✗"}
-                    </td>
-                  </tr>
+
+      <article className="goal-card">
+        <GoalRing total={selfRow.total} goal={goal} />
+        <p className="goal-note">
+          {remaining === 0
+            ? "Weekly goal hit. Keep attending if you want the extra actions."
+            : `You need ${remaining} more action${remaining === 1 ? "" : "s"} this week to hit ${goal}.`}
+        </p>
+        <p className="muted">One point for each action you host or attend this schedule week.</p>
+        <WeekBars labels={shortLabels} values={selfRow.points} />
+      </article>
+
+      {data.canViewTeam && (
+        <section className="goal-team">
+          <p className="eyebrow">Aux+ only</p>
+          <h2>Team tracking</h2>
+          <p className="lede">
+            {hitCount} of {teamScores.length} people have hit {goal} actions this week.
+          </p>
+
+          <div className="goal-team-hero">
+            <article className="goal-card goal-card-compact">
+              <h3>People at goal</h3>
+              <GoalRing
+                total={hitCount}
+                goal={Math.max(teamScores.length, 1)}
+                size={180}
+                label="Hit 10 this week"
+              />
+            </article>
+          </div>
+
+          <div className="page-toolbar">
+            <label htmlFor="goal-focus">
+              Graph
+              <select
+                id="goal-focus"
+                className="select"
+                value={focusName}
+                onChange={e => setFocusName(e.target.value)}
+              >
+                <option value="">Whole team</option>
+                {teamScores.map(s => (
+                  <option key={s.staffName} value={s.staffName}>
+                    {s.staffName}
+                  </option>
                 ))}
-              </Fragment>
+              </select>
+            </label>
+          </div>
+
+          <article className="card chart-panel">
+            <h3>{focusRow ? `${focusRow.staffName} — daily` : "Team daily total"}</h3>
+            <div className="chart">
+              <GoalLineChart labels={labels} series={lineSeries} />
+            </div>
+          </article>
+
+          <article className="card chart-panel">
+            <h3>Weekly total vs {goal}</h3>
+            <div className="chart">
+              <GoalBarChart
+                items={teamScores.map((s, i) => ({
+                  name: s.staffName,
+                  value: s.total,
+                  color: CHART_COLORS[i % CHART_COLORS.length]
+                }))}
+                goal={goal}
+              />
+            </div>
+          </article>
+
+          <div className="goal-ring-grid">
+            {teamScores.map(s => (
+              <button
+                type="button"
+                key={s.staffName}
+                className={`goal-mini${focusName === s.staffName ? " is-active" : ""}`}
+                onClick={() => setFocusName(s.staffName === focusName ? "" : s.staffName)}
+              >
+                <GoalRing total={s.total} goal={goal} size={140} label={s.staffName} />
+                <strong>{s.staffName}</strong>
+                <span className={goalMet(s.total) ? "goal-met" : "goal-not-met"}>
+                  {goalMet(s.total) ? "Goal hit" : `${s.total} / ${goal}`}
+                </span>
+              </button>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

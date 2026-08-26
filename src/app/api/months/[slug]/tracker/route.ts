@@ -11,9 +11,10 @@ import {
 } from "@/services/tracker";
 import { buildAllStatsTables } from "@/services/stats";
 import { recalculatePointsForMonth } from "@/services/points";
-import { parseDate } from "@/lib/dates";
+import { formatDateUK, parseDate } from "@/lib/dates";
 import { writeAuditLog } from "@/lib/audit";
 import { publishMonthTrackerChange, publishTrackerDerivedUpdates } from "@/services/live-sync";
+import { isAllowedTrackerStatus } from "@/services/reference-data";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
@@ -71,6 +72,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         org2Attended: z.string().nullable().optional()
       })
       .parse(await req.json());
+
+    if (body.status?.some(s => !isAllowedTrackerStatus(s, "action"))) {
+      throw new ApiError(400, "Invalid status");
+    }
 
     if (body.action === "add") {
       const row = await addTrackerRow(month.id);
@@ -134,6 +139,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       action: "tracker.update",
       entityType: "tracker_row",
       entityId: row.id,
+      payload: {
+        month: month.name,
+        typeName: row.typeName,
+        org1Name: row.org1Name,
+        org2Name: row.org2Name,
+        actionDate: row.actionDate ? formatDateUK(row.actionDate) : null,
+        hostedBy: row.hostedBy
+      },
       ipAddress: meta.ipAddress
     });
 

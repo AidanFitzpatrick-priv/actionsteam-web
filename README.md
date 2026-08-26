@@ -11,7 +11,7 @@ Production-oriented web port of the Google Sheets + Apps Script workflow.
 | View own goal scores | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Create invite links | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Invite dashboard | ✗ | own | own | all | all | all |
-| Full admin (months, users, data, tools) | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Full admin (months, users, data) | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Hard delete months | ✗ | ✗ | ✗ | ✓* | ✓* | ✓* |
 | Restore production backup | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
 

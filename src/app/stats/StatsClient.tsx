@@ -20,19 +20,142 @@ type MonthInfo = {
   isActive: boolean;
 };
 
+type Overview = {
+  total: number;
+  withStatus: number;
+  completed: number;
+  pdNoShow: number;
+  gangNoShow: number;
+  pending: number;
+  undated: number;
+  completionPct: number;
+  lastMonthTotal: number | null;
+};
+
+type StatsPayload = {
+  tables: Record<string, Table>;
+  month: MonthInfo | null;
+  canViewTeam?: boolean;
+  overview: Overview | null;
+};
+
 function monthLabel(m: MonthOption): string {
   const year = m.year ? ` ${m.year}` : "";
   const active = m.isActive ? " (active)" : "";
   return `${m.name}${year}${active}`;
 }
 
-function monthTitle(month: MonthInfo): string {
-  return month.year ? `${month.name} ${month.year}` : month.name;
+function pct(n: number): string {
+  const rounded = Number.isInteger(n) ? String(n) : n.toFixed(n < 10 ? 1 : 0);
+  return `${rounded}%`;
+}
+
+function StatusBars({ overview }: { overview: Overview }) {
+  const items = [
+    { label: "Completed", value: overview.completed, color: "var(--olive)" },
+    { label: "Gang / org 1 no-show", value: overview.gangNoShow, color: "#fb7185" },
+    { label: "PD / org 2 no-show", value: overview.pdNoShow, color: "#f0b429" }
+  ];
+  const total = items.reduce((sum, item) => sum + item.value, 0);
+  if (total === 0) {
+    return <p className="muted">No finished actions for this month yet.</p>;
+  }
+  return (
+    <div className="stat-bars">
+      {items.map(item => (
+        <div key={item.label} className="stat-bar-row">
+          <div className="stat-bar-meta">
+            <span>{item.label}</span>
+            <strong>
+              {item.value}
+              {total ? ` · ${Math.round((item.value / total) * 100)}%` : ""}
+            </strong>
+          </div>
+          <div className="stat-bar-track">
+            <div
+              className="stat-bar-fill"
+              style={{
+                width: `${(item.value / total) * 100}%`,
+                background: item.color
+              }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TableCard({
+  title,
+  hint,
+  table,
+  empty
+}: {
+  title: string;
+  hint?: string;
+  table?: Table;
+  empty: string;
+}) {
+  const rows = table?.rows ?? [];
+  return (
+    <article className="card stats-table-card">
+      <h3>{title}</h3>
+      {hint && <p className="stat-card-hint">{hint}</p>}
+      {rows.length === 0 ? (
+        <p className="muted">{empty}</p>
+      ) : (
+        <div className="stats-table-wrap">
+          <table className="table">
+            <thead>
+              <tr>{table!.headers.map(h => <th key={h}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i}>{row.map((cell, j) => <td key={j}>{cell}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function PairCard({
+  title,
+  hint,
+  left,
+  right
+}: {
+  title: string;
+  hint?: string;
+  left: { label: string; value: string; sub?: string };
+  right: { label: string; value: string; sub?: string };
+}) {
+  return (
+    <article className="card stats-table-card">
+      <h3>{title}</h3>
+      {hint && <p className="stat-card-hint">{hint}</p>}
+      <div className="stat-split">
+        <div>
+          <p className="stat-card-label">{left.label}</p>
+          <p className="stat-card-value">{left.value}</p>
+          {left.sub && <p className="stat-card-sub">{left.sub}</p>}
+        </div>
+        <div>
+          <p className="stat-card-label">{right.label}</p>
+          <p className="stat-card-value">{right.value}</p>
+          {right.sub && <p className="stat-card-sub">{right.sub}</p>}
+        </div>
+      </div>
+    </article>
+  );
 }
 
 export function StatsClient() {
-  const [tables, setTables] = useState<Record<string, Table> | null>(null);
-  const [month, setMonth] = useState<MonthInfo | null>(null);
+  const [payload, setPayload] = useState<StatsPayload | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [months, setMonths] = useState<MonthOption[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string>("");
   const [selfUserId, setSelfUserId] = useState<string | undefined>();
@@ -53,14 +176,27 @@ export function StatsClient() {
   const load = useCallback(async () => {
     const params = new URLSearchParams();
     if (selectedSlug) params.set("month", selectedSlug);
-    const res = await fetch(`/api/stats?${params}`);
-    const data = await res.json();
+    let res: Response;
+    try {
+      res = await fetch(`/api/stats?${params}`);
+    } catch {
+      setError("Could not load stats.");
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      setTables(data.tables ?? {});
-      setMonth(data.month ?? null);
+      setError(null);
+      setPayload({
+        tables: data.tables ?? {},
+        month: data.month ?? null,
+        canViewTeam: data.canViewTeam,
+        overview: data.overview ?? null
+      });
       if (data.month?.slug && !selectedSlug) {
         setSelectedSlug(data.month.slug);
       }
+    } else {
+      setError(typeof data.error === "string" ? data.error : "Could not load stats.");
     }
   }, [selectedSlug]);
 
@@ -77,19 +213,28 @@ export function StatsClient() {
 
   useLiveSync({
     selfUserId,
-    acceptOwnEventTypes: ["stats.updated"],
+    acceptOwnEventTypes: ["stats.updated", "admin.updated"],
     onEvent: ev => {
-      if (ev.type === "stats.updated" || ev.type.startsWith("tracker.")) load();
+      if (ev.type === "stats.updated" || ev.type.startsWith("tracker.") || ev.type === "admin.updated") load();
     }
   });
 
-  if (!tables) return <p className="muted">Loading stats…</p>;
+  if (error && !payload) return <p className="error">{error}</p>;
+  if (!payload) return <p className="muted">Loading stats…</p>;
 
-  const keys = ["winrate", "avgMembers", "statusPct", "mostPlayed", "gangAttendance", "monthlyStaffScores"] as const;
+  const { tables, month, overview } = payload;
+  const canViewTeam = payload.canViewTeam === true;
+  const winrate = tables.winrate;
+  const avgMembers = tables.avgMembers;
+  const org1 = winrate?.rows[0];
+  const org2 = winrate?.rows[1];
+  const pdAvg = avgMembers?.rows[0];
+  const gangAvg = avgMembers?.rows[1];
 
   return (
-    <div>
-      <h1>Action Stats</h1>
+    <div className="stats-page">
+      <p className="eyebrow">This month</p>
+      <h1>Action stats</h1>
       {months.length > 0 && (
         <div className="field" style={{ maxWidth: 280, marginTop: 12 }}>
           <label htmlFor="stats-month">Month</label>
@@ -107,37 +252,87 @@ export function StatsClient() {
           </select>
         </div>
       )}
-      <p className="muted">
-        {month ? (
-          <>
-            Stats for <strong>{monthTitle(month)}</strong>
-            {!month.isActive && " (not the active month)"}.
-          </>
-        ) : (
-          "No active month."
-        )}{" "}
-        Gang attendance Total only counts rows with Status set. Updates live when the tracker changes.
-      </p>
-      <div className="grid-2" style={{ marginTop: 24 }}>
-        {keys.map(key => {
-          const t = tables[key];
-          if (!t || t.rows.length === 0) return null;
-          return (
-            <div className="card" key={key}>
-              <table className="table">
-                <thead>
-                  <tr>{t.headers.map(h => <th key={h}>{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {t.rows.map((row, i) => (
-                    <tr key={i}>{row.map((cell, j) => <td key={j}>{cell}</td>)}</tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-        })}
+
+      {overview && (
+        <div className="stats-kpis">
+          <article className="stat-card">
+            <p className="stat-card-label">Actions logged</p>
+            <p className="stat-card-value">{overview.total}</p>
+            <p className="stat-card-sub">
+              {overview.completed} completed
+              {overview.lastMonthTotal != null ? ` · ${overview.lastMonthTotal} last month` : ""}
+              {overview.undated > 0 ? ` · ${overview.undated} undated` : ""}
+            </p>
+          </article>
+          <article className="stat-card">
+            <p className="stat-card-label">Finished cleanly</p>
+            <p className="stat-card-value">{pct(overview.completionPct)}</p>
+            <p className="stat-card-sub">{overview.completed} completed</p>
+          </article>
+        </div>
+      )}
+
+      {overview && (
+        <div className="stats-hero">
+          <article className="goal-card goal-card-compact stats-status-card">
+            <h3>How they finished</h3>
+            <p className="stat-card-hint">Completed vs no-shows.</p>
+            <StatusBars overview={overview} />
+          </article>
+        </div>
+      )}
+
+      <div className="stats-grid">
+        <PairCard
+          title="Win rate"
+          hint="Of actions with a winner recorded."
+          left={{
+            label: "Org 1",
+            value: org1 ? pct(Number(org1[2]) || 0) : "—",
+            sub: org1 ? `${org1[1]} wins` : undefined
+          }}
+          right={{
+            label: "Org 2 / PD",
+            value: org2 ? pct(Number(org2[2]) || 0) : "—",
+            sub: org2 ? `${org2[1]} wins` : undefined
+          }}
+        />
+        <PairCard
+          title="Average turnout"
+          hint="Headcount when it was filled in."
+          left={{
+            label: "PD + Army",
+            value: pdAvg ? String(pdAvg[1]) : "—",
+            sub: "avg members"
+          }}
+          right={{
+            label: "Gangs",
+            value: gangAvg ? String(gangAvg[1]) : "—",
+            sub: "avg members"
+          }}
+        />
+        <TableCard
+          title="Most played types"
+          hint="What the month is actually running."
+          table={tables.mostPlayed}
+          empty="No action types recorded yet."
+        />
+        <TableCard
+          title="Gang attendance"
+          hint="Attended vs total for the month."
+          table={tables.gangAttendance}
+          empty="No gang attendance to show yet."
+        />
       </div>
+
+      {canViewTeam && (tables.monthlyStaffScores?.rows.length ?? 0) > 0 && (
+        <TableCard
+          title="Monthly staff scores"
+          hint="Host +2, attend +1, for the selected month. Aux+ only."
+          table={tables.monthlyStaffScores}
+          empty="No staff scores for this month."
+        />
+      )}
     </div>
   );
 }

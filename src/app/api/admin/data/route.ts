@@ -84,7 +84,6 @@ export async function POST(req: NextRequest) {
       const row = await ref.upsertGang({
         id: body.id,
         name: body.name,
-        org2Eligible: body.org2Eligible,
         actorUserId: user.id,
         ipAddress: meta.ipAddress
       });

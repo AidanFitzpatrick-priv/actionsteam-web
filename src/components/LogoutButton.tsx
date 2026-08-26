@@ -12,8 +12,8 @@ export function LogoutButton() {
   }
 
   return (
-    <button type="button" className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: 13 }} onClick={logout}>
-      Log out
+    <button type="button" className="ghost" onClick={logout}>
+      Out
     </button>
   );
 }

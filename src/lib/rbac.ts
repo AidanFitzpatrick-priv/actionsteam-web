@@ -18,6 +18,21 @@ export function hasMinRole(userRole: UserRole, minRole: UserRole): boolean {
   return roleLevel(userRole) >= roleLevel(minRole);
 }
 
+/** Aux, adm, and management (including the reserved `admin` account). */
+export function isAuxPlus(role: UserRole): boolean {
+  return hasMinRole(role, "aux");
+}
+
+/** Leaderboard + goals team widgets: action-takers below aux, not hidden. */
+export function isRankedActionParticipant(
+  targetRole: UserRole,
+  hiddenFromGoalTrackers = false
+): boolean {
+  if (isAuxPlus(targetRole)) return false;
+  if (hiddenFromGoalTrackers) return false;
+  return true;
+}
+
 export function canCreateInvites(role: UserRole): boolean {
   return hasMinRole(role, "sub_lead");
 }
@@ -38,8 +53,32 @@ export function formatRole(role: UserRole): string {
   return role.replace(/_/g, " ");
 }
 
-/** Admin → Users: may change role only for users strictly below actor rank. */
-export function canEditUserRole(actorRole: UserRole, targetUserRole: UserRole): boolean {
+/** The reserved `admin` username (case-insensitive). Not the same as the management role. */
+export function isProtectedAdminAccount(username: string): boolean {
+  return username.trim().toLowerCase() === "admin";
+}
+
+/** The `admin` account may manage other management members (role / delete / reset). */
+function adminCanManageManagement(
+  actorUsername: string | undefined,
+  targetUserRole: UserRole,
+  targetUsername?: string
+): boolean {
+  if (!actorUsername || !isProtectedAdminAccount(actorUsername)) return false;
+  if (targetUsername !== undefined && isProtectedAdminAccount(targetUsername)) return false;
+  return targetUserRole === "management";
+}
+
+/** Admin → Users: may change role only for users strictly below actor rank.
+ *  The `admin` account may also change other management members' roles. */
+export function canEditUserRole(
+  actorRole: UserRole,
+  targetUserRole: UserRole,
+  targetUsername?: string,
+  actorUsername?: string
+): boolean {
+  if (targetUsername !== undefined && isProtectedAdminAccount(targetUsername)) return false;
+  if (adminCanManageManagement(actorUsername, targetUserRole, targetUsername)) return true;
   return roleLevel(targetUserRole) < roleLevel(actorRole);
 }
 
@@ -56,12 +95,9 @@ export function canAssignRole(actorRole: UserRole, newRole: UserRole): boolean {
   return roleLevel(newRole) < roleLevel(actorRole);
 }
 
-export function canHardDeleteMonth(role: UserRole): boolean {
-  return role === "adm" || role === "management";
-}
-
-export function canViewBackups(role: UserRole): boolean {
-  return role === "adm" || role === "management";
+/** Backups UI/API: only the reserved `admin` account, not other management. */
+export function canViewBackups(username: string): boolean {
+  return isProtectedAdminAccount(username);
 }
 
 /** Admin → Users: aux+ may edit usernames. */
@@ -70,24 +106,31 @@ export function canEditUsername(role: UserRole): boolean {
 }
 
 /** Admin → Users: aux+ may delete users strictly below their rank.
- *  Management may also delete other management, except the protected `admin` account. */
-export function isProtectedAdminAccount(username: string): boolean {
-  return username.trim().toLowerCase() === "admin";
-}
-
+ *  Management may also delete other management, except the protected `admin` account.
+ *  The `admin` account may delete other management (same as other management today). */
 export function canDeleteUser(
   actorRole: UserRole,
   targetUserRole: UserRole,
-  targetUsername?: string
+  targetUsername?: string,
+  actorUsername?: string
 ): boolean {
   if (targetUsername !== undefined && isProtectedAdminAccount(targetUsername)) return false;
   if (!hasMinRole(actorRole, "aux")) return false;
+  if (adminCanManageManagement(actorUsername, targetUserRole, targetUsername)) return true;
   if (actorRole === "management" && targetUserRole === "management") return true;
   return roleLevel(targetUserRole) < roleLevel(actorRole);
 }
 
-/** Admin → Users: aux+ may force password reset for users strictly below their rank. */
-export function canResetUserPassword(actorRole: UserRole, targetUserRole: UserRole): boolean {
+/** Admin → Users: aux+ may force password reset for users strictly below their rank.
+ *  The `admin` account may also reset other management members. Never the `admin` account. */
+export function canResetUserPassword(
+  actorRole: UserRole,
+  targetUserRole: UserRole,
+  targetUsername?: string,
+  actorUsername?: string
+): boolean {
+  if (targetUsername !== undefined && isProtectedAdminAccount(targetUsername)) return false;
+  if (adminCanManageManagement(actorUsername, targetUserRole, targetUsername)) return true;
   return hasMinRole(actorRole, "aux") && roleLevel(targetUserRole) < roleLevel(actorRole);
 }
 

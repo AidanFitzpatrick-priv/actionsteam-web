@@ -3,6 +3,7 @@ import {
   BR_ACTION_TYPE_NAMES,
   TRACKER_HIDDEN_ACTION_TYPE_NAMES,
   filterTypesForActionTracker,
+  isAllowedTrackerStatus,
   isHiddenFromActionTracker,
   statusOptionsForTypeKind
 } from "./reference-data";
@@ -19,20 +20,34 @@ describe("ActionType kind filtering", () => {
     ]);
   });
 
-  it("returns full status options for action kind", () => {
+  it("returns action-tracker status options for action kind", () => {
     const options = statusOptionsForTypeKind("action");
     expect(options).toEqual([
       "Completed",
-      "Actions Didn't Attend",
       "Org 1 Didn't Attend",
       "Org 2 Didn't Attend",
-      "Gang Didn't Attend",
-      "PD Didn't Attend"
+      "Actions Didn't Attend"
     ]);
+    expect(options).not.toContain("Gang Didn't Attend");
+    expect(options).not.toContain("PD Didn't Attend");
+    expect(options).not.toContain("-");
+    expect(options).not.toContain("—");
   });
 
   it("defaults to action status options when kind omitted", () => {
     expect(statusOptionsForTypeKind()).toEqual(statusOptionsForTypeKind("action"));
+  });
+
+  it("rejects removed action statuses", () => {
+    expect(isAllowedTrackerStatus("Completed")).toBe(true);
+    expect(isAllowedTrackerStatus("Org 1 Didn't Attend")).toBe(true);
+    expect(isAllowedTrackerStatus("Org 2 Didn't Attend")).toBe(true);
+    expect(isAllowedTrackerStatus("Actions Didn't Attend")).toBe(true);
+    expect(isAllowedTrackerStatus("Gang Didn't Attend")).toBe(false);
+    expect(isAllowedTrackerStatus("PD Didn't Attend")).toBe(false);
+    expect(isAllowedTrackerStatus("-")).toBe(false);
+    expect(isAllowedTrackerStatus("")).toBe(false);
+    expect(isAllowedTrackerStatus("Org 1 Didn't Attend", "br")).toBe(false);
   });
 });
 

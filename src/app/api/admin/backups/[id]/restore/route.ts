@@ -8,8 +8,8 @@ type Ctx = { params: Promise<{ id: string }> };
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const user = await requireRole("member");
-    if (!canViewBackups(user.role)) {
-      throw new ApiError(403, "Only adm or management can access backups");
+    if (!canViewBackups(user.username)) {
+      throw new ApiError(403, "Only the admin account can access backups");
     }
     if (!canRestoreProduction(user.role)) {
       throw new ApiError(403, "Production restore requires management role");

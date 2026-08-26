@@ -6,10 +6,11 @@ import {
   canDeleteUser,
   canResetUserPassword,
   canEditUsername,
-  canHardDeleteMonth,
   canViewBackups,
   canManageGoalTrackerVisibility,
   canViewGoalScoreRow,
+  isAuxPlus,
+  isRankedActionParticipant,
   shouldShowOnGoalTracker,
   sortGoalTrackerRows,
   canViewAllActionLogs,
@@ -27,6 +28,21 @@ describe("canEditUserRole", () => {
     expect(canEditUserRole("aux", "aux")).toBe(false);
     expect(canEditUserRole("aux", "adm")).toBe(false);
     expect(canEditUserRole("lead", "aux")).toBe(false);
+  });
+
+  it("allows the admin account to change other management roles", () => {
+    expect(canEditUserRole("management", "management", "pat", "admin")).toBe(true);
+    expect(canEditUserRole("management", "management", "pat", "Admin")).toBe(true);
+  });
+
+  it("blocks other management from changing peer management roles", () => {
+    expect(canEditUserRole("management", "management", "pat", "boss")).toBe(false);
+    expect(canEditUserRole("management", "management", "pat")).toBe(false);
+  });
+
+  it("never allows changing the protected admin account role", () => {
+    expect(canEditUserRole("management", "management", "admin", "boss")).toBe(false);
+    expect(canEditUserRole("management", "management", "Admin", "admin")).toBe(false);
   });
 });
 
@@ -79,11 +95,13 @@ describe("canDeleteUser", () => {
 
   it("allows management to delete other management", () => {
     expect(canDeleteUser("management", "management", "pat")).toBe(true);
+    expect(canDeleteUser("management", "management", "pat", "admin")).toBe(true);
   });
 
   it("never allows deleting the protected admin account", () => {
     expect(canDeleteUser("management", "management", "admin")).toBe(false);
     expect(canDeleteUser("management", "management", "Admin")).toBe(false);
+    expect(canDeleteUser("management", "management", "admin", "boss")).toBe(false);
     expect(canDeleteUser("adm", "management", "admin")).toBe(false);
     expect(canDeleteUser("aux", "member", "admin")).toBe(false);
   });
@@ -100,6 +118,19 @@ describe("canResetUserPassword", () => {
     expect(canResetUserPassword("aux", "aux")).toBe(false);
     expect(canResetUserPassword("aux", "adm")).toBe(false);
     expect(canResetUserPassword("lead", "member")).toBe(false);
+    expect(canResetUserPassword("management", "management", "pat")).toBe(false);
+    expect(canResetUserPassword("management", "management", "pat", "boss")).toBe(false);
+  });
+
+  it("allows the admin account to reset other management passwords", () => {
+    expect(canResetUserPassword("management", "management", "pat", "admin")).toBe(true);
+    expect(canResetUserPassword("management", "management", "pat", "Admin")).toBe(true);
+  });
+
+  it("never allows resetting the protected admin account", () => {
+    expect(canResetUserPassword("management", "management", "admin", "boss")).toBe(false);
+    expect(canResetUserPassword("management", "management", "Admin", "admin")).toBe(false);
+    expect(canResetUserPassword("adm", "management", "admin")).toBe(false);
   });
 });
 
@@ -116,26 +147,18 @@ describe("canEditUsername", () => {
   });
 });
 
-describe("canHardDeleteMonth", () => {
-  it("allows adm and management only", () => {
-    expect(canHardDeleteMonth("adm")).toBe(true);
-    expect(canHardDeleteMonth("management")).toBe(true);
-  });
-
-  it("denies aux and below", () => {
-    expect(canHardDeleteMonth("aux")).toBe(false);
-    expect(canHardDeleteMonth("lead")).toBe(false);
-    expect(canHardDeleteMonth("member")).toBe(false);
-  });
-});
-
 describe("canViewBackups", () => {
-  it("allows adm and management only", () => {
-    expect(canViewBackups("adm")).toBe(true);
-    expect(canViewBackups("management")).toBe(true);
+  it("allows only the reserved admin account", () => {
+    expect(canViewBackups("admin")).toBe(true);
+    expect(canViewBackups("Admin")).toBe(true);
+    expect(canViewBackups("ADMIN")).toBe(true);
+    expect(canViewBackups("  admin  ")).toBe(true);
   });
 
-  it("denies aux and below", () => {
+  it("denies other usernames including other management", () => {
+    expect(canViewBackups("boss")).toBe(false);
+    expect(canViewBackups("management")).toBe(false);
+    expect(canViewBackups("adm")).toBe(false);
     expect(canViewBackups("aux")).toBe(false);
     expect(canViewBackups("lead")).toBe(false);
     expect(canViewBackups("member")).toBe(false);
@@ -167,6 +190,29 @@ describe("shouldShowOnGoalTracker", () => {
     expect(shouldShowOnGoalTracker("sub_lead")).toBe(true);
     expect(shouldShowOnGoalTracker("member")).toBe(true);
     expect(shouldShowOnGoalTracker("member", false)).toBe(true);
+  });
+});
+
+describe("isRankedActionParticipant", () => {
+  it("treats aux and above as AUX+", () => {
+    expect(isAuxPlus("member")).toBe(false);
+    expect(isAuxPlus("lead")).toBe(false);
+    expect(isAuxPlus("aux")).toBe(true);
+    expect(isAuxPlus("adm")).toBe(true);
+    expect(isAuxPlus("management")).toBe(true);
+  });
+
+  it("includes members, sub-leads, and leads", () => {
+    expect(isRankedActionParticipant("member")).toBe(true);
+    expect(isRankedActionParticipant("sub_lead")).toBe(true);
+    expect(isRankedActionParticipant("lead")).toBe(true);
+  });
+
+  it("excludes AUX+ and hidden users from leaderboard / goals team lists", () => {
+    expect(isRankedActionParticipant("aux")).toBe(false);
+    expect(isRankedActionParticipant("adm")).toBe(false);
+    expect(isRankedActionParticipant("management")).toBe(false);
+    expect(isRankedActionParticipant("member", true)).toBe(false);
   });
 });
 

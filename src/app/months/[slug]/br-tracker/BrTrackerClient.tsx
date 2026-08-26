@@ -221,16 +221,19 @@ export function BrTrackerClient({
     } else {
       mergeRemoteRows(data.rows);
     }
+    if (data.dropdowns) setDropdowns(data.dropdowns);
   }, [slug, mergeRemoteRows, editingIds]);
 
   useLiveSync({
     monthSlug: slug,
     selfUserId,
+    acceptOwnEventTypes: ["admin.updated"],
     onEvent: ev => {
       if (
         ev.type === "br_tracker.updated" ||
         ev.type === "br_tracker.added" ||
-        ev.type === "br_tracker.deleted"
+        ev.type === "br_tracker.deleted" ||
+        ev.type === "admin.updated"
       ) {
         void refreshFromServer();
       }
@@ -297,7 +300,6 @@ export function BrTrackerClient({
           {monthName}
           {titleYear} — Battle Royale Tracker
         </h1>
-        <p className="muted">Log City, Cayo, and Sandy BRs. Place fields are winner ID text, not account picks.</p>
       </div>
 
       <div className="tracker-toolbar">

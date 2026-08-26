@@ -53,7 +53,7 @@ export async function signupWithInvite(params: {
     action: "auth.signup",
     entityType: "invite",
     entityId: validation.invite.id,
-    payload: { invitedBy: validation.invite.createdByUserId },
+    payload: { username: user.username, invitedBy: validation.invite.createdByUserId },
     ipAddress: params.ipAddress
   });
 

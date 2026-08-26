@@ -8,7 +8,7 @@ import {
   addBrTrackerRow,
   softDeleteBrTrackerRow
 } from "@/services/br-tracker";
-import { parseDate } from "@/lib/dates";
+import { formatDateUK, parseDate } from "@/lib/dates";
 import { writeAuditLog } from "@/lib/audit";
 import { publishMonthBrTrackerChange } from "@/services/live-sync";
 
@@ -112,6 +112,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       action: "br_tracker.update",
       entityType: "br_tracker_row",
       entityId: row.id,
+      payload: {
+        month: month.name,
+        typeName: row.typeName,
+        actionDate: row.actionDate ? formatDateUK(row.actionDate) : null
+      },
       ipAddress: meta.ipAddress
     });
 

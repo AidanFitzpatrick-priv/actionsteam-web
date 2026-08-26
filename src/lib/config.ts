@@ -8,7 +8,7 @@ export const SCHEDULE = {
   DAYS_PER_WEEK: 7
 } as const;
 
-/** Schedule column times (row 0 → 13:00 … row 11 → 00:00). */
+/** Schedule column times (row 0 → 13:00 … row 11 → 00:00). Kept for stored rowIndex mapping. */
 export const SCHEDULE_TIME_LABELS = [
   "13:00",
   "14:00",
@@ -23,6 +23,9 @@ export const SCHEDULE_TIME_LABELS = [
   "23:00",
   "00:00"
 ] as const;
+
+/** Grid columns: 18:00–22:00 (6pm until 11pm). Drops 13:00–17:00, 23:00, and 00:00. */
+export const SCHEDULE_VISIBLE_ROW_INDICES = [5, 6, 7, 8, 9] as const;
 
 export function scheduleTimeLabelForRow(rowIndex: number): string {
   return SCHEDULE_TIME_LABELS[rowIndex] ?? "";

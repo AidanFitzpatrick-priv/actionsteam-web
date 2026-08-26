@@ -124,6 +124,7 @@ export async function restoreBackup(params: {
     action: "backup.restore",
     entityType: "backup",
     entityId: backup.id,
+    payload: { createdAt: backup.createdAt.toISOString() },
     ipAddress: params.ipAddress
   });
 

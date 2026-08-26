@@ -40,6 +40,7 @@ model User {
   invitedViaInviteId String?   @unique @map("invited_via_invite_id")
   mustResetPassword       Boolean   @default(false) @map("must_reset_password")
   hiddenFromGoalTrackers  Boolean   @default(false) @map("hidden_from_goal_trackers")
+  avatarUpdatedAt         DateTime? @map("avatar_updated_at")
 
   invitedViaInvite Invite?  @relation("UserInvite", fields: [invitedViaInviteId], references: [id])
   invitesCreated   Invite[] @relation("InviteCreatedBy")
@@ -47,8 +48,19 @@ model User {
   auditLogs        AuditLog[]
   passwordResetTokens PasswordResetToken[]
   actionLogs       ActionLog[]
+  avatar           UserAvatar?
 
   @@map("users")
+}
+
+model UserAvatar {
+  userId    String   @id @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mime      String
+  data      Bytes
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_avatars")
 }
 
 model Invite {

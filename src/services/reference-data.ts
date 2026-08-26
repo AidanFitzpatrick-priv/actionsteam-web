@@ -33,6 +33,7 @@ export async function upsertStaff(params: {
     action: params.id ? "staff.update" : "staff.create",
     entityType: "staff",
     entityId: row.id,
+    payload: { name: row.name },
     ipAddress: params.ipAddress
   });
 
@@ -54,6 +55,7 @@ export async function softDeleteStaff(params: {
     action: "staff.soft_delete",
     entityType: "staff",
     entityId: params.id,
+    payload: { name: row.name },
     ipAddress: params.ipAddress
   });
 
@@ -112,15 +114,44 @@ export async function upsertActionType(params: {
     kind: params.kind ?? "action"
   };
 
-  const row = params.id
-    ? await prisma.actionType.update({ where: { id: params.id }, data })
-    : await prisma.actionType.create({ data });
+  const previous = params.id
+    ? await prisma.actionType.findUnique({ where: { id: params.id } })
+    : null;
+
+  const row = await prisma.$transaction(async tx => {
+    const saved = params.id
+      ? await tx.actionType.update({ where: { id: params.id }, data })
+      : await tx.actionType.create({ data });
+
+    const oldName = previous?.name?.trim();
+    if (oldName && oldName !== saved.name) {
+      await tx.scheduleSlot.updateMany({
+        where: { typeName: oldName },
+        data: { typeName: saved.name }
+      });
+      await tx.trackerRow.updateMany({
+        where: { typeName: oldName },
+        data: { typeName: saved.name }
+      });
+      await tx.brTrackerRow.updateMany({
+        where: { typeName: oldName },
+        data: { typeName: saved.name }
+      });
+    }
+
+    return saved;
+  });
 
   await writeAuditLog({
     userId: params.actorUserId,
     action: params.id ? "action_type.update" : "action_type.create",
     entityType: "action_type",
     entityId: row.id,
+    payload: {
+      name: row.name,
+      kind: row.kind,
+      ...(previous?.name && previous.name !== row.name ? { oldName: previous.name } : {})
+    },
     ipAddress: params.ipAddress
   });
 
@@ -142,6 +173,7 @@ export async function softDeleteActionType(params: {
     action: "action_type.soft_delete",
     entityType: "action_type",
     entityId: params.id,
+    payload: { name: row.name, kind: row.kind },
     ipAddress: params.ipAddress
   });
 
@@ -158,24 +190,59 @@ export async function listGangs() {
 export async function upsertGang(params: {
   id?: string;
   name: string;
-  org2Eligible?: boolean;
   actorUserId: string;
   ipAddress?: string | null;
 }) {
   const data = {
     name: params.name.trim(),
-    org2Eligible: params.org2Eligible ?? true
+    org2Eligible: true
   };
 
-  const row = params.id
-    ? await prisma.gang.update({ where: { id: params.id }, data })
-    : await prisma.gang.create({ data });
+  const previous = params.id
+    ? await prisma.gang.findUnique({ where: { id: params.id } })
+    : null;
+
+  const row = await prisma.$transaction(async tx => {
+    const saved = params.id
+      ? await tx.gang.update({ where: { id: params.id }, data })
+      : await tx.gang.create({ data });
+
+    const oldName = previous?.name?.trim();
+    if (oldName && oldName !== saved.name) {
+      await tx.scheduleSlot.updateMany({
+        where: { orgName: oldName },
+        data: { orgName: saved.name }
+      });
+      await tx.trackerRow.updateMany({
+        where: { org1Name: oldName },
+        data: { org1Name: saved.name }
+      });
+      await tx.trackerRow.updateMany({
+        where: { org2Name: oldName },
+        data: { org2Name: saved.name }
+      });
+      await tx.trackerRow.updateMany({
+        where: { actionWinner: oldName },
+        data: { actionWinner: saved.name }
+      });
+      await tx.actionLog.updateMany({
+        where: { orgName: oldName },
+        data: { orgName: saved.name }
+      });
+    }
+
+    return saved;
+  });
 
   await writeAuditLog({
     userId: params.actorUserId,
     action: params.id ? "gang.update" : "gang.create",
     entityType: "gang",
     entityId: row.id,
+    payload: {
+      name: row.name,
+      ...(previous?.name && previous.name !== row.name ? { oldName: previous.name } : {})
+    },
     ipAddress: params.ipAddress
   });
 
@@ -197,24 +264,31 @@ export async function softDeleteGang(params: {
     action: "gang.soft_delete",
     entityType: "gang",
     entityId: params.id,
+    payload: { name: row.name },
     ipAddress: params.ipAddress
   });
 
   return row;
 }
 
+/** Status dropdown options for the action tracker. */
+export const ACTION_STATUS_OPTIONS = [
+  "Completed",
+  "Org 1 Didn't Attend",
+  "Org 2 Didn't Attend",
+  "Actions Didn't Attend"
+] as const;
+
+/** Status dropdown options for the BR tracker. */
+export const BR_STATUS_OPTIONS = ["Completed", "Actions Didn't Attend"] as const;
+
 /** Status dropdown options for tracker surfaces. */
 export function statusOptionsForTypeKind(typeKind?: ActionTypeKind): string[] {
-  return typeKind === "br"
-    ? ["Completed", "Actions Didn't Attend"]
-    : [
-        "Completed",
-        "Actions Didn't Attend",
-        "Org 1 Didn't Attend",
-        "Org 2 Didn't Attend",
-        "Gang Didn't Attend",
-        "PD Didn't Attend"
-      ];
+  return typeKind === "br" ? [...BR_STATUS_OPTIONS] : [...ACTION_STATUS_OPTIONS];
+}
+
+export function isAllowedTrackerStatus(value: string, typeKind?: ActionTypeKind): boolean {
+  return statusOptionsForTypeKind(typeKind).includes(value);
 }
 
 /** Dropdown options for tracker/schedule — PD first in org2 list. */
@@ -238,7 +312,7 @@ export async function getDropdownOptions(opts?: {
   ]);
 
   const org1Names = gangs.map(g => g.name);
-  const org2Names = ["PD", ...gangs.filter(g => g.org2Eligible).map(g => g.name)];
+  const org2Names = ["PD", ...org1Names];
 
   const visibleTypes = opts?.actionTracker ? filterTypesForActionTracker(types) : types;
 

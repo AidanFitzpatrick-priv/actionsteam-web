@@ -5,48 +5,37 @@ import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteU
 import { usernameSchema } from "@/lib/user-fields";
 import { publishUserGoalSync, removeUserFromGoalData, renameUserDisplayNameInSources, recalculateNonArchivedMonths } from "@/services/user-sync";
 
-export async function listUsers() {
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      invitedViaInvite: {
-        include: { createdBy: { select: { username: true } } }
-      }
+const listedUserSelect = {
+  id: true,
+  username: true,
+  cityId: true,
+  role: true,
+  org: true,
+  hiddenFromGoalTrackers: true,
+  mustResetPassword: true,
+  createdAt: true,
+  invitedViaInvite: {
+    select: {
+      createdBy: { select: { username: true } }
     }
-  });
+  }
+} as const;
 
-  return users.map(u => ({
-    id: u.id,
-    email: u.email,
-    username: u.username,
-    cityId: u.cityId,
-    discordId: u.discordId,
-    role: u.role,
-    roleLabel: formatRole(u.role),
-    org: u.org,
-    hiddenFromGoalTrackers: u.hiddenFromGoalTrackers,
-    mustResetPassword: u.mustResetPassword,
-    createdAt: u.createdAt,
-    invitedBy: u.invitedViaInvite?.createdBy?.username ?? null
-  }));
-}
-
-export async function getListedUser(userId: string) {
-  const u = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      invitedViaInvite: {
-        include: { createdBy: { select: { username: true } } }
-      }
-    }
-  });
-  if (!u) return null;
+function toListedUser(u: {
+  id: string;
+  username: string;
+  cityId: string | null;
+  role: UserRole;
+  org: UserOrg | null;
+  hiddenFromGoalTrackers: boolean;
+  mustResetPassword: boolean;
+  createdAt: Date;
+  invitedViaInvite: { createdBy: { username: string } | null } | null;
+}) {
   return {
     id: u.id,
-    email: u.email,
     username: u.username,
     cityId: u.cityId,
-    discordId: u.discordId,
     role: u.role,
     roleLabel: formatRole(u.role),
     org: u.org,
@@ -57,10 +46,31 @@ export async function getListedUser(userId: string) {
   };
 }
 
+export async function listUsers() {
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+    select: listedUserSelect
+  });
+
+  return users
+    .filter(u => !isProtectedAdminAccount(u.username))
+    .map(toListedUser);
+}
+
+export async function getListedUser(userId: string) {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: listedUserSelect
+  });
+  if (!u) return null;
+  return toListedUser(u);
+}
+
 export async function updateUser(params: {
   userId: string;
   actorUserId: string;
   actorRole: UserRole;
+  actorUsername: string;
   role?: UserRole;
   username?: string;
   cityId?: string | null;
@@ -72,8 +82,15 @@ export async function updateUser(params: {
   const target = await prisma.user.findUnique({ where: { id: params.userId } });
   if (!target) throw new Error("User not found");
 
+  if (
+    isProtectedAdminAccount(target.username) &&
+    !isProtectedAdminAccount(params.actorUsername)
+  ) {
+    throw new Error("The admin account cannot be modified");
+  }
+
   if (params.role !== undefined) {
-    if (!canEditUserRole(params.actorRole, target.role)) {
+    if (!canEditUserRole(params.actorRole, target.role, target.username, params.actorUsername)) {
       throw new Error("You cannot change the role of someone at or above your rank");
     }
     if (!canAssignRole(params.actorRole, params.role)) {
@@ -94,6 +111,9 @@ export async function updateUser(params: {
     const username = usernameSchema.parse(params.username);
     if (isProtectedAdminAccount(target.username) && username.toLowerCase() !== target.username.toLowerCase()) {
       throw new Error("The admin account cannot be renamed");
+    }
+    if (isProtectedAdminAccount(username) && !isProtectedAdminAccount(target.username)) {
+      throw new Error("That username is reserved");
     }
     const taken = await prisma.user.findFirst({
       where: { username, NOT: { id: params.userId } }
@@ -190,6 +210,7 @@ export async function resetUserPassword(params: {
   userId: string;
   actorUserId: string;
   actorRole: UserRole;
+  actorUsername: string;
   ipAddress?: string | null;
 }) {
   const target = await prisma.user.findUnique({ where: { id: params.userId } });
@@ -199,7 +220,7 @@ export async function resetUserPassword(params: {
     throw new Error("You cannot reset your own password here");
   }
 
-  if (!canResetUserPassword(params.actorRole, target.role)) {
+  if (!canResetUserPassword(params.actorRole, target.role, target.username, params.actorUsername)) {
     throw new Error("You cannot reset the password of someone at or above your rank");
   }
 
@@ -226,6 +247,7 @@ export async function deleteUser(params: {
   userId: string;
   actorUserId: string;
   actorRole: UserRole;
+  actorUsername: string;
   ipAddress?: string | null;
 }) {
   const target = await prisma.user.findUnique({ where: { id: params.userId } });
@@ -235,7 +257,7 @@ export async function deleteUser(params: {
     throw new Error("You cannot delete your own account");
   }
 
-  if (!canDeleteUser(params.actorRole, target.role, target.username)) {
+  if (!canDeleteUser(params.actorRole, target.role, target.username, params.actorUsername)) {
     throw new Error("You cannot delete this account");
   }
 

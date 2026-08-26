@@ -83,9 +83,9 @@ export function ActionLogClient() {
 
   useLiveSync({
     selfUserId: viewerId,
-    acceptOwnEventTypes: ["action_log.created", "action_log.deleted"],
+    acceptOwnEventTypes: ["action_log.created", "action_log.deleted", "admin.updated"],
     onEvent: ev => {
-      if (ev.type === "action_log.created" || ev.type === "action_log.deleted") {
+      if (ev.type === "action_log.created" || ev.type === "action_log.deleted" || ev.type === "admin.updated") {
         load().catch(() => {});
       }
     }

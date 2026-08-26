@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { jsonError, jsonOk, requireRole, getMeta, ApiError } from "@/lib/api";
-import { canHardDeleteMonth } from "@/lib/rbac";
 import { publishAdminChange } from "@/services/live-sync";
 import * as months from "@/services/months";
 
@@ -13,8 +12,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const { slug } = await ctx.params;
     const body = z
       .object({
-        action: z.enum(["activate", "archive", "hard_delete"]),
-        reason: z.string().optional()
+        action: z.enum(["activate", "archive", "unarchive"])
       })
       .parse(await req.json());
     const meta = getMeta(req);
@@ -39,22 +37,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return jsonOk({ month });
     }
 
-    if (body.action === "hard_delete") {
-      if (!canHardDeleteMonth(user.role)) {
-        throw new ApiError(403, "Only adm or management can hard delete a month");
-      }
-      if (!body.reason || body.reason.trim().length < 3) {
-        throw new ApiError(400, "Reason required for hard delete");
-      }
-      await months.hardDeleteMonth({
+    if (body.action === "unarchive") {
+      const month = await months.unarchiveMonth({
         slug,
-        reason: body.reason.trim(),
         actorUserId: user.id,
-        actorRole: user.role,
         ipAddress: meta.ipAddress
       });
-      await publishAdminChange(user.id, "months:hard_delete");
-      return jsonOk({ ok: true });
+      await publishAdminChange(user.id, "months:unarchive");
+      return jsonOk({ month });
     }
 
     throw new ApiError(400, "Unknown action");
