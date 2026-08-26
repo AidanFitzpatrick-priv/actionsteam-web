@@ -4,12 +4,12 @@ import { WEEKLY_ACTION_GOAL, goalMet } from "@/lib/goals";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export const CHART_COLORS = [
-  "#3dcea8",
+  "#3d6cb8",
   "#f0b429",
   "#7dd3fc",
   "#c4b5fd",
   "#fb7185",
-  "#34d399",
+  "#5b8fd4",
   "#60a5fa",
   "#fbbf24"
 ];

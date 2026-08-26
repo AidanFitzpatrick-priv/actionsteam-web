@@ -8,15 +8,16 @@
   --text: #e8edf4;
   --muted: #8b97a8;
   --slate: #9aa6b5;
-  --olive: #3dcea8;
-  --olive-2: #2bb894;
-  --accent: #3dcea8;
-  --accent-hover: #2bb894;
+  --olive: #3d6cb8;
+  --olive-2: #2d5594;
+  --accent: #3d6cb8;
+  --accent-hover: #2d5594;
   --copper: #f0b429;
   --danger: #ff7a7a;
-  --success: #3dcea8;
+  --success: #3d6cb8;
   --radius: 12px;
-  --glow: rgba(61, 206, 168, 0.16);
+  --glow: rgba(61, 108, 184, 0.16);
+  --on-accent: #e8edf4;
 }
 
 * { box-sizing: border-box; }
@@ -25,13 +26,13 @@ html { color-scheme: dark; }
 body {
   font-family: "IBM Plex Sans", system-ui, sans-serif;
   background:
-    radial-gradient(900px 480px at 0% -10%, rgba(61, 206, 168, 0.12), transparent 55%),
+    radial-gradient(900px 480px at 0% -10%, rgba(61, 108, 184, 0.12), transparent 55%),
     radial-gradient(700px 420px at 100% 0%, rgba(240, 180, 41, 0.06), transparent 50%),
     var(--bg);
   color: var(--text);
   line-height: 1.5;
 }
-::selection { background: rgba(61, 206, 168, 0.28); }
+::selection { background: rgba(61, 108, 184, 0.28); }
 
 h1, h2, h3 {
   font-family: Outfit, system-ui, sans-serif;
@@ -83,8 +84,8 @@ main:has(.schedule-layout) {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-  background: linear-gradient(180deg, #4adbb4, #2bb894);
-  color: #062019;
+  background: linear-gradient(180deg, #4a7ec8, #1e3a6e);
+  color: var(--on-accent);
 }
 .btn:hover { filter: brightness(1.08); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
@@ -94,7 +95,7 @@ main:has(.schedule-layout) {
   border: 1px solid var(--olive);
   font-weight: 600;
 }
-.btn-secondary:hover { filter: none; background: rgba(61, 206, 168, 0.12); }
+.btn-secondary:hover { filter: none; background: rgba(61, 108, 184, 0.12); }
 .btn-danger { background: var(--danger); color: #160808; }
 
 .input, .select, textarea.input {
@@ -142,7 +143,7 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; c
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th, .table td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--line); }
 .table th { color: var(--muted); font-weight: 600; font-size: 0.82rem; }
-.table tbody tr:hover td { background: rgba(61, 206, 168, 0.04); }
+.table tbody tr:hover td { background: rgba(61, 108, 184, 0.04); }
 .audit-what { font-weight: 500; }
 .audit-details { color: var(--muted); font-size: 13px; margin-top: 2px; }
 
@@ -185,7 +186,7 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; c
   padding-top: 12px;
 }
 .goal-met {
-  color: #86efac;
+  color: #93c5fd;
   font-weight: 700;
   text-align: center;
 }
@@ -202,8 +203,8 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; c
   font-size: 12px;
   font-weight: 600;
 }
-.badge-pending { background: rgba(61, 206, 168, 0.14); color: var(--olive); }
-.badge-used { background: rgba(61, 206, 168, 0.18); color: #86efac; }
+.badge-pending { background: rgba(61, 108, 184, 0.14); color: var(--olive); }
+.badge-used { background: rgba(61, 108, 184, 0.18); color: #93c5fd; }
 .badge-expired { background: #44403c; color: #d6d3d1; }
 .badge-revoked { background: #450a0a; color: #fca5a5; }
 .eyebrow {
@@ -381,8 +382,8 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; c
   display: grid;
   place-items: center;
   border-radius: 10px;
-  background: linear-gradient(160deg, #4adbb4, #1f8f74);
-  color: #062019;
+  background: linear-gradient(160deg, #4a7ec8, #1e3a6e);
+  color: var(--on-accent);
   font-family: Outfit, system-ui, sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
@@ -398,7 +399,7 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; c
   font-size: 0.92rem;
 }
 .sidebar nav a.active, .sidebar nav a:hover {
-  background: rgba(61, 206, 168, 0.12);
+  background: rgba(61, 108, 184, 0.12);
   color: var(--olive);
   text-decoration: none;
 }
@@ -427,7 +428,7 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; c
 }
 .sidebar-account:hover,
 .sidebar-account:focus-visible {
-  background: rgba(61, 206, 168, 0.1);
+  background: rgba(61, 108, 184, 0.1);
   outline: none;
 }
 .sidebar-account:disabled { opacity: 0.7; cursor: wait; }
@@ -479,8 +480,8 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; c
   place-items: center;
   font-size: 0.75rem;
   font-weight: 700;
-  background: linear-gradient(160deg, #4adbb4, #1f8f74);
-  color: #062019;
+  background: linear-gradient(160deg, #4a7ec8, #1e3a6e);
+  color: var(--on-accent);
   overflow: hidden;
 }
 .avatar img {
@@ -586,12 +587,12 @@ label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; c
   }
   .page { padding: 18px 16px 48px; }
 }
-.badge-used { background: #14532d; color: #86efac; }
+.badge-used { background: #1e3a5f; color: #93c5fd; }
 .badge-expired { background: #44403c; color: #d6d3d1; }
 .badge-revoked { background: #450a0a; color: #fca5a5; }
 
 .error { color: #fca5a5; font-size: 14px; margin-top: 8px; }
-.success { color: #86efac; font-size: 14px; margin-top: 8px; }
+.success { color: #93c5fd; font-size: 14px; margin-top: 8px; }
 .muted { color: var(--muted); font-size: 14px; }
 h1 { font-size: 1.75rem; margin: 0 0 8px; }
 h2 { font-size: 1.25rem; margin: 0 0 16px; }
@@ -1077,8 +1078,8 @@ main:has(.tracker-page) {
 }
 .btn-toggle.is-positive {
   border-color: var(--success);
-  background: rgba(34, 197, 94, 0.12);
-  color: #86efac;
+  background: rgba(61, 108, 184, 0.12);
+  color: #93c5fd;
 }
 .btn-toggle.is-negative {
   border-color: var(--danger);
@@ -1121,8 +1122,8 @@ main:has(.tracker-page) {
   padding: 2px 8px;
 }
 .pill-positive, .pill-met {
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.15);
+  color: #93c5fd;
+  background: rgba(61, 108, 184, 0.15);
 }
 .pill-negative, .pill-missing {
   color: #fca5a5;
@@ -1156,7 +1157,7 @@ main:has(.tracker-page) {
 .range-toggle button.on {
   background: var(--olive);
   border-color: var(--olive);
-  color: #062019;
+  color: var(--on-accent);
 }
 .podium {
   display: grid;
@@ -1179,7 +1180,7 @@ main:has(.tracker-page) {
 .podium-card.rank-1 {
   padding-top: 28px;
   border-color: var(--olive);
-  background: rgba(61, 206, 168, 0.1);
+  background: rgba(61, 108, 184, 0.1);
 }
 .podium-card p { margin: 0; }
 .podium-card .points {
