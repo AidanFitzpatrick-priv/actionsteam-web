@@ -704,7 +704,7 @@ h2 { font-size: 1.25rem; margin: 0 0 16px; }
   min-height: 0;
 }
 .schedule-grid {
-  width: max(100%, calc(8.5rem + 5 * 12rem));
+  width: max(100%, calc(8.5rem + 6 * 12rem));
   table-layout: fixed;
   font-size: 14px;
   height: 100%;
