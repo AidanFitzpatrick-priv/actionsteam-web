@@ -10,7 +10,7 @@ export async function GET() {
     const user = await requireUser();
     const avatar = await prisma.userAvatar.findUnique({ where: { userId: user.id } });
     if (!avatar) throw new ApiError(404, "No profile photo");
-    return new NextResponse(Buffer.from(avatar.data), {
+    return new NextResponse(Uint8Array.from(avatar.data), {
       headers: {
         "Content-Type": avatar.mime,
         "Cache-Control": "private, max-age=3600"
@@ -26,13 +26,14 @@ export async function POST(req: NextRequest) {
     const user = await requireUser();
     const body = z.object({ image: z.string().min(1) }).parse(await req.json());
     const { buf, mime } = parseAvatarDataUrl(body.image);
+    const data = Uint8Array.from(buf);
     const now = new Date();
 
     await prisma.$transaction([
       prisma.userAvatar.upsert({
         where: { userId: user.id },
-        create: { userId: user.id, mime, data: buf },
-        update: { mime, data: buf }
+        create: { userId: user.id, mime, data },
+        update: { mime, data }
       }),
       prisma.user.update({
         where: { id: user.id },
