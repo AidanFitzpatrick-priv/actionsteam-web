@@ -16,7 +16,7 @@ export default async function AdminUsersPage() {
       <p className="muted">
         {admin ? (
           <>
-            Edit usernames, roles, orgs, and city IDs, reset passwords, or permanently delete users below your rank. You cannot delete yourself or reset your own password here.
+            Create users without a password — they set one the first time they sign in. Edit usernames, roles, orgs, and city IDs, reset passwords, or permanently delete users below your rank. You cannot delete yourself or reset your own password here.
             Only management can assign management.
             {isAdminAccount && " You can also delete, reset passwords, and change roles for other management members."}
           </>

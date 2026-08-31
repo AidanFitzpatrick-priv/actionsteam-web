@@ -92,6 +92,17 @@ describe("formatAuditEvent", () => {
     expect(result.details).not.toContain("m1");
   });
 
+  it("describes user.create with the username", () => {
+    const result = formatAuditEvent({
+      action: "user.create",
+      entityType: "user",
+      entityId: "u1",
+      payload: { username: "Exempt" }
+    });
+    expect(result.what).toBe("Created a user");
+    expect(result.details).toBe("Exempt");
+  });
+
   it("humanises unknown action codes", () => {
     const result = formatAuditEvent({ action: "custom.thing_done" });
     expect(result.what).toBe("Custom thing done");

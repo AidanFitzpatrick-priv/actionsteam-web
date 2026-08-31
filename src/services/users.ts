@@ -1,8 +1,9 @@
 import { UserOrg, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { generateSecureToken, hashPassword } from "@/lib/crypto";
 import { writeAuditLog } from "@/lib/audit";
 import { formatRole, canEditUserRole, canAssignRole, canEditUsername, canDeleteUser, canManageGoalTrackerVisibility, canResetUserPassword, isProtectedAdminAccount } from "@/lib/rbac";
-import { usernameSchema } from "@/lib/user-fields";
+import { cityIdSchema, usernameSchema } from "@/lib/user-fields";
 import { publishUserGoalSync, removeUserFromGoalData, renameUserDisplayNameInSources, recalculateNonArchivedMonths } from "@/services/user-sync";
 
 const listedUserSelect = {
@@ -55,6 +56,71 @@ export async function listUsers() {
   return users
     .filter(u => !isProtectedAdminAccount(u.username))
     .map(toListedUser);
+}
+
+export async function createUser(params: {
+  actorUserId: string;
+  actorRole: UserRole;
+  actorUsername: string;
+  username: string;
+  email: string;
+  cityId: string;
+  role?: UserRole;
+  org?: UserOrg | null;
+  ipAddress?: string | null;
+}) {
+  const username = usernameSchema.parse(params.username);
+  const email = params.email.trim().toLowerCase();
+  const cityId = cityIdSchema.parse(params.cityId);
+  const role = params.role ?? "member";
+  const org = params.org ?? null;
+
+  if (isProtectedAdminAccount(username)) {
+    throw new Error("That username is reserved");
+  }
+
+  if (!canAssignRole(params.actorRole, role)) {
+    throw new Error("You cannot assign that role");
+  }
+
+  const existing = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email },
+        { username: { equals: username, mode: "insensitive" } },
+        { cityId }
+      ]
+    }
+  });
+  if (existing) {
+    if (existing.email === email) throw new Error("Email is already taken");
+    if (existing.cityId === cityId) throw new Error("City ID is already registered");
+    throw new Error("Username is already taken");
+  }
+
+  const passwordHash = await hashPassword(generateSecureToken(32));
+  const user = await prisma.user.create({
+    data: {
+      username,
+      email,
+      cityId,
+      passwordHash,
+      role,
+      org,
+      mustResetPassword: true
+    }
+  });
+
+  await writeAuditLog({
+    userId: params.actorUserId,
+    action: "user.create",
+    entityType: "user",
+    entityId: user.id,
+    payload: { username: user.username, email: user.email, role: user.role, cityId: user.cityId, org: user.org },
+    ipAddress: params.ipAddress
+  });
+
+  return user;
 }
 
 export async function getListedUser(userId: string) {

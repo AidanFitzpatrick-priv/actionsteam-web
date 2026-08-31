@@ -50,6 +50,7 @@ const ACTION_LABELS: Record<string, string> = {
   "gang.create": "Added a gang",
   "gang.update": "Updated a gang",
   "gang.soft_delete": "Removed a gang",
+  "user.create": "Created a user",
   "user.update": "Updated a user",
   "user.avatar_update": "Updated their profile photo",
   "user.delete": "Deleted a user",
@@ -210,6 +211,7 @@ export function formatAuditEvent(
       case "gang.soft_delete":
         details = namedDetails(payload, lookup.gangs?.[entityId]);
         break;
+      case "user.create":
       case "user.update":
       case "user.delete":
       case "user.reset_password":

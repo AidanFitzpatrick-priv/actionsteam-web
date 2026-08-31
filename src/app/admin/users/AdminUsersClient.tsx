@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type { UserOrg, UserRole } from "@prisma/client";
 import {
   ADMIN_USER_ROLE_GROUPS,
@@ -42,6 +42,14 @@ export function AdminUsersClient({
   const [users, setUsers] = useState<UserRow[]>([]);
   const [usernameDraft, setUsernameDraft] = useState<Record<string, string>>({});
   const [cityDraft, setCityDraft] = useState<Record<string, string>>({});
+  const [newUsername, setNewUsername] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newCityId, setNewCityId] = useState("");
+  const [newRole, setNewRole] = useState<UserRole>("member");
+  const [newOrg, setNewOrg] = useState<"" | UserOrg>("");
+  const [createError, setCreateError] = useState("");
+  const [createNotice, setCreateNotice] = useState("");
+  const [creating, setCreating] = useState(false);
   const assignableRoles = allowedRoleOptionsForActor(viewerRole);
   const canManageUsers = isFullAdmin(viewerRole);
   const canEditNames = canManageUsers && canEditUsername(viewerRole);
@@ -112,6 +120,41 @@ export function AdminUsersClient({
       const data = await res.json();
       alert(data.error ?? "Delete failed");
     }
+    await load();
+  }
+
+  async function createUser(e: FormEvent) {
+    e.preventDefault();
+    if (!canManageUsers) return;
+    setCreateError("");
+    setCreateNotice("");
+    setCreating(true);
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "createUser",
+        username: newUsername,
+        email: newEmail,
+        cityId: newCityId,
+        role: newRole,
+        org: newOrg === "" ? null : newOrg
+      })
+    });
+    const data = await res.json();
+    setCreating(false);
+    if (!res.ok) {
+      setCreateError(data.error ?? "Could not create user");
+      return;
+    }
+    setNewUsername("");
+    setNewEmail("");
+    setNewCityId("");
+    setNewRole("member");
+    setNewOrg("");
+    setCreateNotice(
+      `${data.user?.username ?? "User"} created. They can sign in with their username and set a password.`
+    );
     await load();
   }
 
@@ -267,7 +310,91 @@ export function AdminUsersClient({
   }
 
   return (
-    <div className="card">
+    <div>
+      {canManageUsers && (
+        <div className="card" style={{ marginBottom: 24 }}>
+          <h2>Create user</h2>
+          <p className="muted">
+            No password, and no email is sent. They sign in with their username and choose a password, same as after a reset.
+          </p>
+          <form onSubmit={createUser}>
+            <div className="admin-create-user">
+              <div className="field">
+                <label htmlFor="new-username">Username</label>
+                <input
+                  id="new-username"
+                  className="input"
+                  value={newUsername}
+                  onChange={e => setNewUsername(e.target.value)}
+                  required
+                  minLength={3}
+                  maxLength={32}
+                  pattern="[a-zA-Z0-9_\-]+"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="new-email">Email</label>
+                <input
+                  id="new-email"
+                  className="input"
+                  type="email"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  required
+                  autoComplete="off"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="new-city">City ID</label>
+                <input
+                  id="new-city"
+                  className="input"
+                  value={newCityId}
+                  onChange={e => setNewCityId(e.target.value)}
+                  required
+                  maxLength={64}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="new-role">Role</label>
+                <select
+                  id="new-role"
+                  className="select"
+                  value={newRole}
+                  onChange={e => setNewRole(e.target.value as UserRole)}
+                >
+                  {assignableRoles.map(r => (
+                    <option key={r} value={r}>{formatRole(r)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="new-org">Org</label>
+                <select
+                  id="new-org"
+                  className="select"
+                  value={newOrg}
+                  onChange={e => setNewOrg(e.target.value as "" | UserOrg)}
+                >
+                  <option value="">—</option>
+                  <option value="gang">Gang</option>
+                  <option value="pd">PD</option>
+                </select>
+              </div>
+              <div className="admin-create-user-actions">
+                <button type="submit" className="btn" disabled={creating}>
+                  {creating ? "Creating…" : "Create user"}
+                </button>
+              </div>
+            </div>
+            {createError && <p className="error">{createError}</p>}
+            {createNotice && <p className="muted">{createNotice}</p>}
+          </form>
+        </div>
+      )}
+      <div className="card">
       <table className="table admin-users-table">
         <thead>
           <tr>
@@ -289,6 +416,7 @@ export function AdminUsersClient({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
