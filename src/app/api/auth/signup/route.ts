@@ -4,15 +4,15 @@ import { jsonError, jsonOk, getMeta, ApiError } from "@/lib/api";
 import { signupWithInvite } from "@/services/auth";
 import { createSession, sessionCookieOptions, SESSION_COOKIE, REFRESH_COOKIE } from "@/lib/session";
 
-import { cityIdSchema, usernameSchema } from "@/lib/user-fields";
+import { cityIdSchema, passwordSchema, usernameSchema } from "@/lib/user-fields";
 
 const schema = z.object({
   inviteToken: z.string().min(10),
   email: z.string().email(),
   username: usernameSchema,
   cityId: cityIdSchema,
-  password: z.string().min(10),
-  passwordConfirm: z.string().min(10)
+  password: passwordSchema,
+  passwordConfirm: z.string()
 }).refine(d => d.password === d.passwordConfirm, {
   message: "Passwords do not match",
   path: ["passwordConfirm"]

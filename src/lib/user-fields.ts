@@ -29,7 +29,7 @@ export const discordIdSchema = z
 
 export const passwordSchema = z
   .string()
-  .min(10, "Password must be at least 10 characters");
+  .min(5, "Password must be at least 5 characters");
 
 export function normalizeCityId(raw: string): string {
   return raw.trim();

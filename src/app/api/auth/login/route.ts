@@ -6,7 +6,7 @@ import { createSession, sessionCookieOptions, SESSION_COOKIE, REFRESH_COOKIE } f
 
 const schema = z.object({
   identifier: z.string().min(1),
-  password: z.string().min(1)
+  password: z.string().optional().default("")
 });
 
 export async function POST(req: NextRequest) {

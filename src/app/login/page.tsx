@@ -32,7 +32,7 @@ export default function LoginPage() {
       <div className="login-card">
         <p className="eyebrow">Actions Tracker</p>
         <h1>Sign in</h1>
-        <p className="muted">Use your email or username.</p>
+        <p className="muted">Use your email or username. If an admin reset your password, enter your username and you will be asked to choose a new one.</p>
         <form onSubmit={onSubmit}>
           <div className="field">
             <label htmlFor="identifier">Email or username</label>
@@ -40,7 +40,7 @@ export default function LoginPage() {
           </div>
           <div className="field">
             <label htmlFor="password">Password</label>
-            <input id="password" className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
+            <input id="password" className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
           </div>
           {error && <p className="error">{error}</p>}
           <button type="submit" className="btn">Log in</button>

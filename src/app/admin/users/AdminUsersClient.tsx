@@ -119,7 +119,7 @@ export function AdminUsersClient({
     if (!canManageUsers) return;
     if (
       !confirm(
-        `Force ${user.username} to set a new password on next login? They will be signed out immediately.`
+        `Force ${user.username} to choose a new password next time they sign in? No email will be sent. They do not need their old password. They will be signed out immediately.`
       )
     ) {
       return;

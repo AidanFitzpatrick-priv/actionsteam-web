@@ -2,7 +2,6 @@ import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
 import { writeAuditLog } from "@/lib/audit";
 import { consumeInvite, validateInviteToken } from "@/services/invites";
-import { clearLoginAttempts, checkLoginRateLimit, recordLoginFailure } from "@/lib/rate-limit";
 
 export async function signupWithInvite(params: {
   inviteToken: string;
@@ -31,8 +30,8 @@ export async function signupWithInvite(params: {
     throw new Error("Email or username already taken");
   }
 
-  if (params.password.length < 10) {
-    throw new Error("Password must be at least 10 characters");
+  if (params.password.length < 5) {
+    throw new Error("Password must be at least 5 characters");
   }
 
   const passwordHash = await hashPassword(params.password);
@@ -66,29 +65,28 @@ export async function loginUser(params: {
   ipAddress?: string | null;
 }) {
   const identifier = params.identifier.trim();
-  const ip = params.ipAddress ?? "unknown";
-
-  const rateLimited = await checkLoginRateLimit(ip, identifier);
-  if (rateLimited) throw new Error(rateLimited);
 
   const user = await prisma.user.findFirst({
     where: {
-      OR: [{ email: identifier.toLowerCase() }, { username: identifier }]
+      OR: [
+        { email: identifier.toLowerCase() },
+        { username: { equals: identifier, mode: "insensitive" } }
+      ]
     }
   });
 
   if (!user || user.disabledAt) {
-    await recordLoginFailure(ip, identifier);
     throw new Error("Invalid credentials");
   }
 
-  const valid = await verifyPassword(user.passwordHash, params.password);
-  if (!valid) {
-    await recordLoginFailure(ip, identifier);
-    throw new Error("Invalid credentials");
+  // Admin password reset does not send email. The user only needs their
+  // username/email; next sign-in skips the old password and asks them to set a new one.
+  if (!user.mustResetPassword) {
+    const valid = await verifyPassword(user.passwordHash, params.password);
+    if (!valid) {
+      throw new Error("Invalid credentials");
+    }
   }
-
-  await clearLoginAttempts(ip, identifier);
 
   await writeAuditLog({
     userId: user.id,

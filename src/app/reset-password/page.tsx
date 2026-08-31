@@ -96,7 +96,7 @@ function ResetPasswordForm() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              minLength={10}
+              minLength={5}
               autoComplete="new-password"
             />
           </div>
@@ -109,7 +109,7 @@ function ResetPasswordForm() {
               value={passwordConfirm}
               onChange={e => setPasswordConfirm(e.target.value)}
               required
-              minLength={10}
+              minLength={5}
               autoComplete="new-password"
             />
           </div>

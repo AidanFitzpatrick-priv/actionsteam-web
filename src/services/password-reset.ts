@@ -2,7 +2,6 @@ import { prisma } from "@/lib/db";
 import { generateSecureToken, hashPassword, hashToken } from "@/lib/crypto";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { writeAuditLog } from "@/lib/audit";
-import { checkForgotPasswordRateLimit, recordForgotPasswordAttempt } from "@/lib/rate-limit";
 
 const TOKEN_TTL_MS = 60 * 60 * 1000;
 
@@ -12,12 +11,6 @@ export async function requestPasswordReset(params: {
 }) {
   const email = params.email.trim().toLowerCase();
   if (!email) return { ok: true as const };
-
-  const ip = params.ipAddress ?? "unknown";
-  const rateLimited = await checkForgotPasswordRateLimit(ip, email);
-  if (rateLimited) throw new Error(rateLimited);
-
-  await recordForgotPasswordAttempt(ip, email);
 
   const user = await prisma.user.findFirst({
     where: { email, disabledAt: null }

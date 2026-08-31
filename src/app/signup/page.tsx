@@ -70,8 +70,8 @@ function SignupForm() {
             <input id="username" className="input" value={username} onChange={e => setUsername(e.target.value)} required pattern="[a-zA-Z0-9_\-]+" />
           </div>
           <div className="field">
-            <label htmlFor="password">Password (min 10 characters)</label>
-            <input id="password" className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={10} />
+            <label htmlFor="password">Password (min 5 characters)</label>
+            <input id="password" className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={5} />
           </div>
           <div className="field">
             <label htmlFor="passwordConfirm">Confirm password</label>
